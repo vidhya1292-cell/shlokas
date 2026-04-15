@@ -128,6 +128,7 @@ export default function Home() {
   const chapterName = currentChapter?.name || "Arjuna Vishada Yoga";
   const currentVoice = progress.voice || DEFAULT_VOICE;
   const progressPct = Math.round((masteredCount / TOTAL_VERSES) * 100);
+  const isNewLearner = Object.keys(progress.verseProgress).length === 0;
 
   const cycleLanguage = () => {
     const order: Array<"en-IN" | "ta-IN" | "hi-IN"> = ["en-IN", "ta-IN", "hi-IN"];
@@ -410,8 +411,87 @@ export default function Home() {
           </div>
         )}
 
+        {/* ── New learner discovery ─────────────────────────────────────────── */}
+        {isNewLearner && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: P.primary }}>
+                {t("What would you like to explore?", "என்ன கற்க விரும்புகிறீர்கள்?", "क्या सीखना चाहेंगे?")}
+              </h2>
+              <p className="text-sm opacity-50 mt-0.5">
+                {t("Pick a path to get started", "ஒரு பாதையை தேர்வு செய்யுங்கள்", "शुरू करने के लिए एक रास्ता चुनें")}
+              </p>
+            </div>
+
+            {/* BG card */}
+            <button
+              onClick={() => navigate("/session")}
+              className="w-full rounded-2xl overflow-hidden text-left transition-all active:scale-[0.98]"
+              style={{ background: "white", border: `2px solid ${P.primary}`, boxShadow: "0 4px 20px rgba(30,58,138,0.12)" }}
+            >
+              <div className="px-5 py-4 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-3xl"
+                  style={{ background: P.tint }}>📖</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-base" style={{ color: P.primary }}>
+                      {t("Bhagavad Gita", "பகவத் கீதை", "भगवद्गीता")}
+                    </p>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                      style={{ background: "#DCFCE7", color: "#15803D" }}>
+                      {t("AI Teacher", "AI ஆசிரியர்", "AI शिक्षक")}
+                    </span>
+                  </div>
+                  <p className="text-sm opacity-55 mt-0.5">
+                    {t("700 verses · 18 chapters · Learn with voice", "700 ஸ்லோகங்கள் · குரலில் கற்க", "700 श्लोक · 18 अध्याय · आवाज़ से सीखें")}
+                  </p>
+                  <p className="text-xs font-semibold mt-2" style={{ color: P.primary }}>
+                    {t("Start Learning →", "கற்கத் தொடங்கு →", "सीखना शुरू करें →")}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Mantras card */}
+            <div
+              className="rounded-2xl px-5 py-4 flex items-center gap-4"
+              style={{ background: "white", border: `1.5px solid ${P.cardBorder}` }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-3xl"
+                style={{ background: "#FFF7ED" }}>🕉️</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-base" style={{ color: P.text }}>
+                  {t("Mantra Chanting", "மந்திர ஜபம்", "मंत्र जप")}
+                </p>
+                <p className="text-sm opacity-55 mt-0.5">
+                  {t("Om · Hare Krishna · Om Namah Shivaya", "ஓம் · ஹரே கிருஷ்ண · நமச்சிவாய", "ॐ · हरे कृष्ण · नमः शिवाय")}
+                </p>
+                <p className="text-xs opacity-40 mt-1">{t("Available below ↓", "கீழே உள்ளது ↓", "नीचे उपलब्ध ↓")}</p>
+              </div>
+            </div>
+
+            {/* Deity shlokas card */}
+            <div
+              className="rounded-2xl px-5 py-4 flex items-center gap-4"
+              style={{ background: "white", border: `1.5px solid ${P.cardBorder}` }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-3xl"
+                style={{ background: "#FDF4FF" }}>🪔</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-base" style={{ color: P.text }}>
+                  {t("Deity Shlokas & Bhajans", "தெய்வ ஸ்லோகங்கள்", "देवता श्लोक")}
+                </p>
+                <p className="text-sm opacity-55 mt-0.5">
+                  {t("Prayers for Ganesha, Shiva, Devi & more", "கணேஷ், சிவன், தேவி மற்றும் பலர்", "गणेश, शिव, देवी और अधिक")}
+                </p>
+                <p className="text-xs opacity-40 mt-1">{t("Available below ↓", "கீழே உள்ளது ↓", "नीचे उपलब्ध ↓")}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Today's Class card ──────────────────────────────────────────────── */}
-        <div
+        {!isNewLearner && <div
           className="rounded-2xl overflow-hidden"
           style={{ background: "white", border: `1.5px solid ${P.cardBorder}` }}
         >
@@ -500,7 +580,7 @@ export default function Home() {
               )}
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* ── Mantra Chanting Player ──────────────────────────────────────────── */}
         <div
@@ -650,7 +730,7 @@ export default function Home() {
         </div>
 
         {/* ── Verse of the Day ──────────────────────────────────────────────────── */}
-        <div
+        {!isNewLearner && <div
           className="rounded-2xl p-5"
           style={{ background: "white", border: `1.5px solid ${P.cardBorder}` }}
         >
@@ -709,7 +789,7 @@ export default function Home() {
               🌿 {isTamil && verseOfDay.reflectionTA ? verseOfDay.reflectionTA : verseOfDay.reflection}
             </p>
           )}
-        </div>
+        </div>}
 
         {/* ── Explore & Learn ───────────────────────────────────────────────────── */}
         <div>
