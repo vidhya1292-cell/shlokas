@@ -9,15 +9,23 @@ const DEFAULT_PROGRESS: UserProgress = {
   lastPracticeDate: "",
   verseProgress: {},
   language: "en-IN",
-  voice: "vidya",
+  voice: "kabir",
 };
+
+// v2 voice IDs that are invalid in bulbul:v3
+const V2_VOICES = new Set(["vidya", "anushka", "manisha", "arya", "abhilash", "karun", "hitesh", "neel"]);
 
 export function loadProgress(): UserProgress {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_PROGRESS };
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_PROGRESS, ...parsed };
+    const progress = { ...DEFAULT_PROGRESS, ...parsed };
+    // Migrate stale v2 voice IDs to the new default
+    if (progress.voice && V2_VOICES.has(progress.voice)) {
+      progress.voice = DEFAULT_PROGRESS.voice;
+    }
+    return progress;
   } catch {
     return { ...DEFAULT_PROGRESS };
   }
