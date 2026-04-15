@@ -87,23 +87,19 @@ export async function textToSpeech(
     return ttsCache.get(key)!;
   }
 
-  // Sarvam has a ~500 character limit per input; truncate if needed
-  const maxLen = 490;
+  // bulbul:v3 supports up to 2500 chars; truncate conservatively
+  const maxLen = 2000;
   const input = cleaned.length > maxLen ? cleaned.slice(0, maxLen) : cleaned;
 
-  // Only enable preprocessing for non-Sanskrit languages
-  const usePreprocessing = language !== "hi-IN" && language !== "sa-IN";
-
+  // bulbul:v3 uses "text" (string), not "inputs" (array like v2).
+  // enable_preprocessing is auto-enabled in v3 — do not send it.
   const body: Record<string, unknown> = {
-    inputs: [input],
+    text: input,
     target_language_code: language,
     speaker: voice,
     model: "bulbul:v3",
     pace: pace,
   };
-  if (usePreprocessing) {
-    body.enable_preprocessing = true;
-  }
 
   const response = await fetch("https://api.sarvam.ai/text-to-speech", {
     method: "POST",
