@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { loadProgress, saveProgress } from "../services/storage";
+import { DEFAULT_KIDS_VOICE, DEFAULT_VOICE } from "../services/sarvamService";
 import { motion, AnimatePresence } from "framer-motion";
 
 const P = {
@@ -40,10 +41,12 @@ export default function Onboarding() {
 
   const selectLanguage = (lang: "en-IN" | "ta-IN" | "hi-IN") => {
     const progress = loadProgress();
+    const age = ageGroup ?? "adults";
     saveProgress({
       ...progress,
       language: lang,
-      ageGroup: ageGroup ?? "adults",
+      ageGroup: age,
+      voice: age === "kids" ? DEFAULT_KIDS_VOICE : DEFAULT_VOICE,
       hasCompletedOnboarding: true,
     });
     navigate("/");

@@ -44,15 +44,21 @@ export interface VoiceOption {
   name: string;
   gender: "female" | "male";
   tagline: string;
+  kidsDefault?: boolean;  // auto-selected when ageGroup === "kids"
 }
 
+// bulbul:v3 voices — upgraded from v2
 export const VOICE_OPTIONS: VoiceOption[] = [
-  { id: "vidya",   name: "Vidya",   gender: "female", tagline: "Calm & scholarly" },
-  { id: "anushka", name: "Anushka", gender: "female", tagline: "Warm & gentle" },
-  { id: "karun",   name: "Karun",   gender: "male",   tagline: "Warm & smooth" },
+  { id: "anushka", name: "Anushka", gender: "female", tagline: "Warm & gentle",      kidsDefault: true },
+  { id: "meera",   name: "Meera",   gender: "female", tagline: "Bright & clear" },
+  { id: "priya",   name: "Priya",   gender: "female", tagline: "Calm & expressive" },
+  { id: "vidya",   name: "Vidya",   gender: "female", tagline: "Scholarly & precise" },
+  { id: "neel",    name: "Neel",    gender: "male",   tagline: "Warm & smooth" },
+  { id: "arjun",   name: "Arjun",   gender: "male",   tagline: "Strong & clear" },
 ];
 
-export const DEFAULT_VOICE = "vidya";
+export const DEFAULT_VOICE = "neel";
+export const DEFAULT_KIDS_VOICE = "anushka";
 
 const ttsCache = new Map<string, string>();
 
@@ -95,7 +101,7 @@ export async function textToSpeech(
     inputs: [input],
     target_language_code: language,
     speaker: voice,
-    model: "bulbul:v2",
+    model: "bulbul:v3",
     pace: pace,
   };
   if (usePreprocessing) {
