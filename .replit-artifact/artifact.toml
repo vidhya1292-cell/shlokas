@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Shloka Guru"
+version = "1.0.0"
+id = "artifacts/shloka-guru"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20423
+
+[services.development]
+run = "pnpm --filter @workspace/shloka-guru run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/shloka-guru", "run", "build" ]
+publicDir = "artifacts/shloka-guru/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20423"
+BASE_PATH = "/"
