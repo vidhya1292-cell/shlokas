@@ -49,13 +49,13 @@ export interface VoiceOption {
 
 // bulbul:v3 voices
 export const VOICE_OPTIONS: VoiceOption[] = [
-  { id: "anushka", name: "Anushka", gender: "female", tagline: "Warm & gentle",      kidsDefault: true },
-  { id: "priya",   name: "Priya",   gender: "female", tagline: "Calm & expressive" },
-  { id: "neel",    name: "Neel",    gender: "male",   tagline: "Warm & smooth" },
+  { id: "priya",  name: "Priya",  gender: "female", tagline: "Warm & gentle",   kidsDefault: true },
+  { id: "kavya",  name: "Kavya",  gender: "female", tagline: "Calm & expressive" },
+  { id: "kabir",  name: "Kabir",  gender: "male",   tagline: "Warm & smooth" },
 ];
 
-export const DEFAULT_VOICE = "neel";
-export const DEFAULT_KIDS_VOICE = "anushka";
+export const DEFAULT_VOICE = "kabir";
+export const DEFAULT_KIDS_VOICE = "priya";
 
 const ttsCache = new Map<string, string>();
 
