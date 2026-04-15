@@ -19,6 +19,7 @@ import {
   stopCurrentAudio,
   unlockAudioContext,
   DEFAULT_VOICE,
+  transliterateToTamil,
 } from "../services/sarvamService";
 import { unlockChantingAudio } from "../services/chantingService";
 
@@ -245,6 +246,22 @@ export default function Read() {
 
                 {/* Verses */}
                 <div className="flex flex-col gap-4 px-4 py-4">
+                  {/* Banner when DB isn't connected — shows partial local data */}
+                  {!loadingChapter && sections.length === 0 && chapterVerses.length > 0 && (
+                    <div
+                      className="rounded-2xl px-4 py-3 flex items-center gap-3"
+                      style={{ background: "#FEF3C7", border: "1.5px solid #FCD34D" }}
+                    >
+                      <span style={{ fontSize: 20 }}>⚠️</span>
+                      <p className="text-xs font-medium" style={{ color: "#92400E" }}>
+                        {t(
+                          `Showing ${chapterVerses.length} preview verses. All ${displaySections.find(c=>c.number===selectedChapter)?.slokaCount ?? ''} verses load when connected.`,
+                          `${chapterVerses.length} ஸ்லோகங்கள் மட்டுமே. இணைய இணைப்பில் அனைத்தும் கிடைக்கும்.`,
+                          `${chapterVerses.length} श्लोक दिख रहे हैं। इंटरनेट से जुड़ने पर सभी लोड होंगे।`,
+                        )}
+                      </p>
+                    </div>
+                  )}
                   {loadingChapter && Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="w-full h-48 rounded-2xl animate-pulse"
                       style={{ background: "#EEF2FF" }} />
@@ -644,29 +661,64 @@ function VerseCard({
       </div>
 
       <div className="p-5">
-        {/* Sanskrit — larger for comfortable reading */}
-        <p
-          className="text-center mb-3"
-          style={{
-            fontFamily: "'Noto Serif Devanagari', serif",
-            fontSize: 22,
-            color: P.text,
-            lineHeight: 2.1,
-            whiteSpace: "pre-line",
-          }}
-        >
-          {verse.sanskrit}
-        </p>
+        {/* ── Tamil users: Sanskrit in Tamil script (they chant by sound, not Devanagari) */}
+        {isTamil && (
+          <>
+            {/* Tamil-script rendering of the Sanskrit — primary chanting text */}
+            <p
+              className="text-center mb-2"
+              style={{
+                fontFamily: "'Noto Sans Tamil', 'Latha', sans-serif",
+                fontSize: 22,
+                color: P.text,
+                lineHeight: 2.1,
+                whiteSpace: "pre-line",
+              }}
+            >
+              {transliterateToTamil(verse.sanskrit)}
+            </p>
+            {/* Devanagari original — smaller, faded, for reference */}
+            <p
+              className="text-center mb-4"
+              style={{
+                fontFamily: "'Noto Serif Devanagari', serif",
+                fontSize: 15,
+                color: P.textMid,
+                lineHeight: 1.9,
+                whiteSpace: "pre-line",
+                opacity: 0.45,
+              }}
+            >
+              {verse.sanskrit}
+            </p>
+          </>
+        )}
 
-        {/* Transliteration — only shown for English users; Tamil/Hindi readers
-            cannot use Latin IAST script and it just clutters the view */}
-        {!isTamil && !isHindi && (
-          <p
-            className="text-center text-sm italic mb-4"
-            style={{ fontFamily: "serif", whiteSpace: "pre-line", color: P.textMid, opacity: 0.65 }}
-          >
-            {verse.transliteration}
-          </p>
+        {/* ── Hindi / English users: Devanagari is primary */}
+        {!isTamil && (
+          <>
+            <p
+              className="text-center mb-3"
+              style={{
+                fontFamily: "'Noto Serif Devanagari', serif",
+                fontSize: 22,
+                color: P.text,
+                lineHeight: 2.1,
+                whiteSpace: "pre-line",
+              }}
+            >
+              {verse.sanskrit}
+            </p>
+            {/* IAST transliteration only for English — Hindi speakers read Devanagari */}
+            {!isHindi && (
+              <p
+                className="text-center text-sm italic mb-4"
+                style={{ fontFamily: "serif", whiteSpace: "pre-line", color: P.textMid, opacity: 0.65 }}
+              >
+                {verse.transliteration}
+              </p>
+            )}
+          </>
         )}
 
         {/* Word-by-word breakdown */}
