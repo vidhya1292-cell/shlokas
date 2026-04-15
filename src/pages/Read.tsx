@@ -10,7 +10,7 @@ import { loadProgress } from "../services/storage";
 import { getSections, type SectionEntry } from "../services/textsService";
 import { getBGVerses } from "../services/versesService";
 import type { Verse } from "../types";
-import { chapters as bgChapters } from "../data/bgData";
+import { chapters as bgChapters, verses as bgVerses } from "../data/bgData";
 import { DEITY_COLLECTIONS } from "../data/deityData";
 import { BHAJANS } from "../data/bhajanData";
 import {
@@ -109,7 +109,13 @@ export default function Read() {
     setLoadingChapter(true);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     const verses = await getBGVerses(n);
-    setChapterVerses(verses);
+    if (verses.length > 0) {
+      setChapterVerses(verses);
+    } else {
+      // Fallback: use local bgData verses for chapters that have them
+      const local = bgVerses.filter((v) => !v.isPlaceholder && v.chapter === n);
+      setChapterVerses(local);
+    }
     setLoadingChapter(false);
   };
 
@@ -252,9 +258,19 @@ export default function Read() {
                     />
                   ))}
                   {!loadingChapter && chapterVerses.length === 0 && (
-                    <p className="text-center text-sm opacity-40 py-8">
-                      {t("No verses found", "ஸ்லோகங்கள் இல்லை", "श्लोक नहीं मिले")}
-                    </p>
+                    <div className="flex flex-col items-center gap-2 py-12 px-4 text-center">
+                      <p className="text-2xl">🔄</p>
+                      <p className="text-sm font-semibold" style={{ color: P.primary }}>
+                        {t("Syncing verse content…", "ஸ்லோகங்கள் ஏற்றப்படுகின்றன…", "श्लोक लोड हो रहे हैं…")}
+                      </p>
+                      <p className="text-xs opacity-40">
+                        {t(
+                          "Please check your internet connection and try again.",
+                          "இணைய இணைப்பை சரிபார்க்கவும்.",
+                          "इंटरनेट कनेक्शन जांचें।",
+                        )}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
