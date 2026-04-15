@@ -50,6 +50,7 @@ export interface UserProgress {
   language: "en-IN" | "ta-IN" | "hi-IN";
   voice?: string;
   hasCompletedOnboarding?: boolean;
+  ageGroup?: "kids" | "adults";
 }
 
 export type SessionState =
