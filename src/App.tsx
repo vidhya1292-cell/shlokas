@@ -5,6 +5,7 @@ import LiveSession from "@/pages/LiveSession";
 import Onboarding from "@/pages/Onboarding";
 import Read from "@/pages/Read";
 import NotFound from "@/pages/not-found";
+import BottomNav from "@/components/BottomNav";
 import { loadProgress } from "@/services/storage";
 
 const queryClient = new QueryClient();
@@ -18,14 +19,19 @@ function Router() {
     return <Redirect to="/onboarding" />;
   }
 
+  const showNav = location === "/" || location === "/read";
+
   return (
-    <Switch>
-      <Route path="/onboarding" component={Onboarding} />
-      <Route path="/" component={Home} />
-      <Route path="/session" component={LiveSession} />
-      <Route path="/read" component={Read} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Switch>
+        <Route path="/onboarding" component={Onboarding} />
+        <Route path="/" component={Home} />
+        <Route path="/session" component={LiveSession} />
+        <Route path="/read" component={Read} />
+        <Route component={NotFound} />
+      </Switch>
+      {showNav && <BottomNav />}
+    </>
   );
 }
 

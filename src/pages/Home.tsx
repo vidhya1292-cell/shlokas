@@ -1,9 +1,10 @@
 import { useLocation } from "wouter";
 import { loadProgress, saveProgress, getMasteredCount, getDueVerses } from "../services/storage";
-import { getRandomVerse, TOTAL_VERSES, chapters, verses as allVerses } from "../data/bgData";
+import { TOTAL_VERSES, chapters, verses as allVerses } from "../data/bgData";
+import { getBGVerseOfDay } from "../services/versesService";
 import { DEITY_COLLECTIONS } from "../data/deityData";
 import { BHAJANS } from "../data/bhajanData";
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { UserProgress } from "../types";
 import {
   VOICE_OPTIONS,
@@ -99,7 +100,10 @@ function getSessionVerseCount(progress: UserProgress): number {
 export default function Home() {
   const [, navigate] = useLocation();
   const [progress, setProgress] = useState<UserProgress>(() => loadProgress());
-  const verseOfDay = useMemo(() => getRandomVerse(), []);
+  const [verseOfDay, setVerseOfDay] = useState(() => allVerses.find((v) => !v.isPlaceholder) ?? allVerses[0]);
+  useEffect(() => {
+    getBGVerseOfDay().then((v) => { if (v) setVerseOfDay(v); }).catch(() => {});
+  }, []);
   const masteredCount = getMasteredCount(progress);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
@@ -321,7 +325,7 @@ export default function Home() {
       </div>
 
       {/* ── Content scroll area ───────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 pb-8">
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 pb-24">
 
         {/* Greeting */}
         <div>
@@ -454,41 +458,26 @@ export default function Home() {
               </div>
             </button>
 
-            {/* Mantras card */}
-            <div
-              className="rounded-2xl px-5 py-4 flex items-center gap-4"
+            {/* Library link */}
+            <button
+              onClick={() => navigate("/read")}
+              className="w-full rounded-2xl px-5 py-4 flex items-center justify-between transition-all active:scale-[0.98]"
               style={{ background: "white", border: `1.5px solid ${P.cardBorder}` }}
             >
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-3xl"
-                style={{ background: "#FFF7ED" }}>🕉️</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-base" style={{ color: P.text }}>
-                  {t("Mantra Chanting", "மந்திர ஜபம்", "मंत्र जप")}
-                </p>
-                <p className="text-sm opacity-55 mt-0.5">
-                  {t("Om · Hare Krishna · Om Namah Shivaya", "ஓம் · ஹரே கிருஷ்ண · நமச்சிவாய", "ॐ · हरे कृष्ण · नमः शिवाय")}
-                </p>
-                <p className="text-xs opacity-40 mt-1">{t("Available below ↓", "கீழே உள்ளது ↓", "नीचे उपलब्ध ↓")}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
+                  style={{ background: P.tint }}>📚</div>
+                <div>
+                  <p className="font-bold text-sm" style={{ color: P.primary }}>
+                    {t("Browse Scripture Library", "வேத நூலகம்", "ग्रंथ पुस्तकालय")}
+                  </p>
+                  <p className="text-xs opacity-50 mt-0.5">
+                    {t("Gita · Mantras · Deity Shlokas · Bhajans", "கீதை · மந்திரம் · ஸ்லோகங்கள்", "गीता · मंत्र · देवता श्लोक")}
+                  </p>
+                </div>
               </div>
-            </div>
-
-            {/* Deity shlokas card */}
-            <div
-              className="rounded-2xl px-5 py-4 flex items-center gap-4"
-              style={{ background: "white", border: `1.5px solid ${P.cardBorder}` }}
-            >
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-3xl"
-                style={{ background: "#FDF4FF" }}>🪔</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-base" style={{ color: P.text }}>
-                  {t("Deity Shlokas & Bhajans", "தெய்வ ஸ்லோகங்கள்", "देवता श्लोक")}
-                </p>
-                <p className="text-sm opacity-55 mt-0.5">
-                  {t("Prayers for Ganesha, Shiva, Devi & more", "கணேஷ், சிவன், தேவி மற்றும் பலர்", "गणेश, शिव, देवी और अधिक")}
-                </p>
-                <p className="text-xs opacity-40 mt-1">{t("Available below ↓", "கீழே உள்ளது ↓", "नीचे उपलब्ध ↓")}</p>
-              </div>
-            </div>
+              <span className="text-xl shrink-0" style={{ color: P.primary }}>›</span>
+            </button>
           </div>
         )}
 

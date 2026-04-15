@@ -4,10 +4,12 @@
  * Each tab allows browsing and reading full texts with Sanskrit,
  * transliteration, and meaning in the user's language.
  */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { loadProgress } from "../services/storage";
-import { chapters, verses as allVerses } from "../data/bgData";
+import { getSections, type SectionEntry } from "../services/textsService";
+import { getBGVerses } from "../services/versesService";
+import type { Verse } from "../types";
 import { DEITY_COLLECTIONS } from "../data/deityData";
 import { BHAJANS } from "../data/bhajanData";
 import {
@@ -33,17 +35,27 @@ const P = {
 type Tab = "gita" | "deity" | "bhajans";
 
 export default function Read() {
-  const [, navigate] = useLocation();
+  useLocation();
   const progress = loadProgress();
   const isTamil = progress.language === "ta-IN";
   const isHindi = progress.language === "hi-IN";
   const t = (en: string, ta: string, hi: string) => (isTamil ? ta : isHindi ? hi : en);
 
   const [tab, setTab] = useState<Tab>("gita");
-  const [selectedChapter, setSelectedChapter] = useState<number>(1);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [selectedDeity, setSelectedDeity] = useState<string>(DEITY_COLLECTIONS[0].id);
   const [expandedBhajan, setExpandedBhajan] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // DB data
+  const [sections, setSections] = useState<SectionEntry[]>([]);
+  const [chapterVerses, setChapterVerses] = useState<Verse[]>([]);
+  const [loadingChapter, setLoadingChapter] = useState(false);
+
+  // Load BG sections on mount
+  useEffect(() => {
+    getSections("bg").then(setSections).catch(() => {});
+  }, []);
 
   // Audio state — tracks which item is currently playing
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -69,20 +81,20 @@ export default function Read() {
     }
   }, [playingId, voice]);
 
-  const changeChapter = (ch: number) => {
-    setSelectedChapter(ch);
-    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   const changeDeity = (id: string) => {
     setSelectedDeity(id);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Gita verses for selected chapter (non-placeholder only)
-  const gitaVerses = allVerses.filter(
-    (v) => v.chapter === selectedChapter && !v.isPlaceholder,
-  );
+  const openChapter = async (n: number) => {
+    setSelectedChapter(n);
+    setChapterVerses([]);
+    setLoadingChapter(true);
+    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    const verses = await getBGVerses(n);
+    setChapterVerses(verses);
+    setLoadingChapter(false);
+  };
 
   const currentDeity = DEITY_COLLECTIONS.find((d) => d.id === selectedDeity)!;
 
@@ -97,14 +109,6 @@ export default function Read() {
         style={{ background: P.bg, borderBottom: `1px solid ${P.cardBorder}` }}
       >
         <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => navigate("/")}
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 shrink-0"
-            style={{ background: P.tint, color: P.primary, border: `1.5px solid ${P.cardBorder}` }}
-            aria-label="Back to home"
-          >
-            ‹
-          </button>
           <div>
             <h1 className="text-lg font-bold" style={{ color: P.primary }}>
               {t("Scripture Library", "வேத நூலகம்", "ग्रंथ पुस्तकालय")}
@@ -126,7 +130,7 @@ export default function Read() {
           ).map((tabDef) => (
             <button
               key={tabDef.id}
-              onClick={() => setTab(tabDef.id)}
+              onClick={() => { setTab(tabDef.id); setSelectedChapter(null); contentRef.current?.scrollTo({ top: 0 }); }}
               className="flex-1 py-2.5 text-sm font-semibold transition-all rounded-none"
               style={{
                 color: tab === tabDef.id ? P.primary : P.textMid,
@@ -142,76 +146,102 @@ export default function Read() {
       </div>
 
       {/* ── Scrollable content ──────────────────────────────────────────────── */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
+      <div ref={contentRef} className="flex-1 overflow-y-auto pb-24">
 
         {/* ════════════════ BHAGAVAD GITA TAB ════════════════════════════════ */}
         {tab === "gita" && (
           <div>
-            {/* Chapter selector — horizontal scroll */}
-            <div
-              className="sticky z-10 px-4 py-3"
-              style={{ top: 0, background: P.bg, borderBottom: `1px solid ${P.cardBorder}` }}
-            >
-              <p className="text-xs opacity-50 mb-2">
-                {t("Select chapter", "அத்தியாயம் தேர்வு செய்க", "अध्याय चुनें")}
-              </p>
-              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                {chapters.map((ch) => (
+            {/* ── Level 1: Chapter list ───────────────────────────────────────── */}
+            {selectedChapter === null && (
+              <div className="px-4 pt-4 pb-6 flex flex-col gap-2">
+                {sections.length === 0 && (
+                  // Skeleton while sections load
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="w-full h-14 rounded-2xl animate-pulse"
+                      style={{ background: "#EEF2FF" }} />
+                  ))
+                )}
+                {sections.map((ch) => (
                   <button
                     key={ch.number}
-                    onClick={() => changeChapter(ch.number)}
-                    className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-semibold transition-all active:scale-95"
-                    style={{
-                      background: selectedChapter === ch.number ? P.primary : "white",
-                      color: selectedChapter === ch.number ? "white" : P.primary,
-                      border: `1.5px solid ${selectedChapter === ch.number ? P.primary : P.cardBorder}`,
-                    }}
+                    onClick={() => openChapter(ch.number)}
+                    className="w-full rounded-2xl px-4 py-3.5 text-left transition-all active:scale-[0.98]"
+                    style={{ background: "white", border: `1.5px solid ${P.cardBorder}` }}
                   >
-                    {t(`Ch ${ch.number}`, `அ ${ch.number}`, `अ ${ch.number}`)}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
+                          style={{ background: P.tint, color: P.primary }}
+                        >
+                          {ch.number}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs opacity-40 uppercase tracking-widest">
+                            {t(`Chapter ${ch.number}`, `அத்தியாயம் ${ch.number}`, `अध्याय ${ch.number}`)}
+                          </p>
+                          <p className="font-semibold text-sm truncate" style={{ color: P.primary }}>
+                            {isTamil && ch.nameTa ? ch.nameTa : isHindi && ch.nameHi ? ch.nameHi : ch.name}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1"
+                        style={{ background: P.tint, color: P.primary }}>
+                        {ch.slokaCount} {t("verses", "ஸ்லோகங்கள்", "श्लोक")} ›
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>
-            </div>
+            )}
 
-            {/* Chapter header */}
-            <div className="px-4 pt-4 pb-2">
-              <div
-                className="rounded-2xl px-5 py-4"
-                style={{ background: P.tint, border: `1.5px solid ${P.cardBorder}` }}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold uppercase tracking-widest opacity-50">
-                    {t(`Chapter ${selectedChapter}`, `அத்தியாயம் ${selectedChapter}`, `अध्याय ${selectedChapter}`)}
-                  </span>
-                  <span className="text-xs opacity-40">·</span>
-                  <span className="text-xs opacity-40">
-                    {gitaVerses.length} {t("verses", "ஸ்லோகங்கள்", "श्लोक")}
-                  </span>
+            {/* ── Level 2: Verses for selected chapter ───────────────────────── */}
+            {selectedChapter !== null && (
+              <div>
+                {/* Back bar */}
+                <div
+                  className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3"
+                  style={{ background: P.bg, borderBottom: `1px solid ${P.cardBorder}` }}
+                >
+                  <button
+                    onClick={() => { setSelectedChapter(null); contentRef.current?.scrollTo({ top: 0 }); }}
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-lg font-bold transition-all active:scale-90"
+                    style={{ background: P.tint, color: P.primary, border: `1.5px solid ${P.cardBorder}` }}
+                  >
+                    ‹
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-xs opacity-40 uppercase tracking-widest">
+                      {t(`Chapter ${selectedChapter}`, `அத்தியாயம் ${selectedChapter}`, `अध्याय ${selectedChapter}`)}
+                    </p>
+                    <p className="font-bold text-sm truncate" style={{ color: P.primary }}>
+                      {sections.find((c) => c.number === selectedChapter)?.name ?? ""}
+                    </p>
+                  </div>
                 </div>
-                <h2 className="text-lg font-bold" style={{ color: P.primary }}>
-                  {chapters.find((c) => c.number === selectedChapter)?.name}
-                </h2>
+
+                {/* Verses */}
+                <div className="flex flex-col gap-4 px-4 py-4">
+                  {loadingChapter && Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="w-full h-48 rounded-2xl animate-pulse"
+                      style={{ background: "#EEF2FF" }} />
+                  ))}
+                  {!loadingChapter && chapterVerses.map((v) => (
+                    <VerseCard
+                      key={`${v.chapter}:${v.verse}`}
+                      verse={v}
+                      isTamil={isTamil}
+                      isHindi={isHindi}
+                    />
+                  ))}
+                  {!loadingChapter && chapterVerses.length === 0 && (
+                    <p className="text-center text-sm opacity-40 py-8">
+                      {t("No verses found", "ஸ்லோகங்கள் இல்லை", "श्लोक नहीं मिले")}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-
-            {/* Verses */}
-            <div className="flex flex-col gap-4 px-4 pb-8 pt-2">
-              {gitaVerses.length === 0 ? (
-                <div className="text-center py-12 opacity-40">
-                  <p className="text-lg mb-1">🙏</p>
-                  <p className="text-sm">{t("Content being added…", "உள்ளடக்கம் சேர்க்கப்படுகிறது…", "सामग्री जोड़ी जा रही है…")}</p>
-                </div>
-              ) : (
-                gitaVerses.map((v) => (
-                  <VerseCard
-                    key={`${v.chapter}:${v.verse}`}
-                    verse={v}
-                    isTamil={isTamil}
-                    isHindi={isHindi}
-                  />
-                ))
-              )}
-            </div>
+            )}
           </div>
         )}
 
