@@ -47,14 +47,11 @@ export interface VoiceOption {
   kidsDefault?: boolean;  // auto-selected when ageGroup === "kids"
 }
 
-// bulbul:v3 voices — upgraded from v2
+// bulbul:v3 voices
 export const VOICE_OPTIONS: VoiceOption[] = [
   { id: "anushka", name: "Anushka", gender: "female", tagline: "Warm & gentle",      kidsDefault: true },
-  { id: "meera",   name: "Meera",   gender: "female", tagline: "Bright & clear" },
   { id: "priya",   name: "Priya",   gender: "female", tagline: "Calm & expressive" },
-  { id: "vidya",   name: "Vidya",   gender: "female", tagline: "Scholarly & precise" },
   { id: "neel",    name: "Neel",    gender: "male",   tagline: "Warm & smooth" },
-  { id: "arjun",   name: "Arjun",   gender: "male",   tagline: "Strong & clear" },
 ];
 
 export const DEFAULT_VOICE = "neel";
