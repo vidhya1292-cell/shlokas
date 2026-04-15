@@ -644,27 +644,30 @@ function VerseCard({
       </div>
 
       <div className="p-5">
-        {/* Sanskrit */}
+        {/* Sanskrit — larger for comfortable reading */}
         <p
-          className="text-center leading-relaxed mb-3"
+          className="text-center mb-3"
           style={{
             fontFamily: "'Noto Serif Devanagari', serif",
-            fontSize: 20,
+            fontSize: 22,
             color: P.text,
-            lineHeight: 2,
+            lineHeight: 2.1,
             whiteSpace: "pre-line",
           }}
         >
           {verse.sanskrit}
         </p>
 
-        {/* Transliteration */}
-        <p
-          className="text-center text-sm italic opacity-40 mb-4"
-          style={{ fontFamily: "serif", whiteSpace: "pre-line" }}
-        >
-          {verse.transliteration}
-        </p>
+        {/* Transliteration — only shown for English users; Tamil/Hindi readers
+            cannot use Latin IAST script and it just clutters the view */}
+        {!isTamil && !isHindi && (
+          <p
+            className="text-center text-sm italic mb-4"
+            style={{ fontFamily: "serif", whiteSpace: "pre-line", color: P.textMid, opacity: 0.65 }}
+          >
+            {verse.transliteration}
+          </p>
+        )}
 
         {/* Word-by-word breakdown */}
         {showWords && verse.wordByWord && (
@@ -681,7 +684,7 @@ function VerseCard({
                 >
                   {w.word}
                 </p>
-                <p className="text-xs opacity-60">{w.meaning}</p>
+                <p className="text-sm" style={{ color: P.text, opacity: 0.75 }}>{w.meaning}</p>
               </div>
             ))}
           </div>
@@ -690,17 +693,17 @@ function VerseCard({
         {/* Divider */}
         <div className="mb-4" style={{ height: 1, background: P.cardBorder }} />
 
-        {/* Meaning */}
+        {/* Meaning — larger, darker text for easy reading */}
         <div className="rounded-xl p-4 mb-3" style={{ background: P.tint }}>
-          <p className="text-xs font-semibold uppercase tracking-wider opacity-50 mb-1.5">
+          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: P.primary, opacity: 0.7 }}>
             {isTamil ? "பொருள்" : isHindi ? "अर्थ" : "Meaning"}
           </p>
-          <p className="text-sm leading-relaxed" style={{ color: P.text }}>{meaning}</p>
+          <p className="text-base leading-relaxed" style={{ color: P.text }}>{meaning}</p>
         </div>
 
         {/* Reflection */}
         {reflection && (
-          <p className="text-sm italic text-center" style={{ color: P.gold, opacity: 0.8 }}>
+          <p className="text-base italic text-center" style={{ color: P.gold, opacity: 0.9 }}>
             🌿 {reflection}
           </p>
         )}
