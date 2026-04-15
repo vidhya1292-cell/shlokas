@@ -661,32 +661,34 @@ function VerseCard({
       </div>
 
       <div className="p-5">
-        {/* ── Tamil users: Sanskrit in Tamil script (they chant by sound, not Devanagari) */}
+
+        {/* ── Tamil: Tamil-script primary, Sanskrit secondary ── */}
         {isTamil && (
           <>
-            {/* Tamil-script rendering of the Sanskrit — primary chanting text */}
             <p
-              className="text-center mb-2"
+              className="text-center"
               style={{
                 fontFamily: "'Noto Sans Tamil', 'Latha', sans-serif",
                 fontSize: 22,
                 color: P.text,
-                lineHeight: 2.1,
+                lineHeight: 1.9,
                 whiteSpace: "pre-line",
+                marginBottom: 14,
               }}
             >
               {transliterateToTamil(verse.sanskrit)}
             </p>
-            {/* Devanagari original — smaller, faded, for reference */}
             <p
-              className="text-center mb-4"
+              className="text-center"
               style={{
                 fontFamily: "'Noto Serif Devanagari', serif",
-                fontSize: 15,
+                fontSize: 16,
                 color: P.textMid,
-                lineHeight: 1.9,
+                lineHeight: 1.8,
                 whiteSpace: "pre-line",
-                opacity: 0.45,
+                fontStyle: "italic",
+                opacity: 0.65,
+                marginBottom: 20,
               }}
             >
               {verse.sanskrit}
@@ -694,47 +696,51 @@ function VerseCard({
           </>
         )}
 
-        {/* ── Hindi users: Devanagari primary (they read it natively) */}
+        {/* ── Hindi: Devanagari only (native script) ── */}
         {isHindi && (
           <p
-            className="text-center mb-4"
+            className="text-center"
             style={{
               fontFamily: "'Noto Serif Devanagari', serif",
               fontSize: 22,
               color: P.text,
-              lineHeight: 2.1,
+              lineHeight: 1.9,
               whiteSpace: "pre-line",
+              marginBottom: 20,
             }}
           >
             {verse.sanskrit}
           </p>
         )}
 
-        {/* ── English users: IAST transliteration first (readable), Devanagari faded below */}
+        {/* ── English: IAST primary, Sanskrit secondary ── */}
         {!isTamil && !isHindi && (
           <>
             <p
-              className="text-center mb-2"
+              className="text-center"
               style={{
-                fontFamily: "serif",
+                fontFamily: "Georgia, serif",
                 fontSize: 19,
                 color: P.text,
-                lineHeight: 2,
+                lineHeight: 1.9,
                 whiteSpace: "pre-line",
                 fontStyle: "italic",
+                marginBottom: 14,
               }}
             >
               {verse.transliteration}
             </p>
             <p
-              className="text-center mb-4"
+              className="text-center"
               style={{
                 fontFamily: "'Noto Serif Devanagari', serif",
-                fontSize: 15,
+                fontSize: 16,
                 color: P.textMid,
-                lineHeight: 1.9,
+                lineHeight: 1.8,
                 whiteSpace: "pre-line",
-                opacity: 0.45,
+                fontStyle: "italic",
+                opacity: 0.65,
+                marginBottom: 20,
               }}
             >
               {verse.sanskrit}
@@ -764,7 +770,7 @@ function VerseCard({
         )}
 
         {/* Divider */}
-        <div className="mb-4" style={{ height: 1, background: P.cardBorder }} />
+        <div style={{ height: 1, background: P.cardBorder, marginBottom: 16 }} />
 
         {/* Meaning — larger, darker text for easy reading */}
         <div className="rounded-xl p-4 mb-3" style={{ background: P.tint }}>
