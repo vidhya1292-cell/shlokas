@@ -1,18 +1,15 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Env vars are baked at build time by Vite (VITE_* prefix).
+// The anon key is intentionally public — it is read-only and protected by RLS.
+// We fall back to the hardcoded values so the app works even when the hosting
+// provider fails to inject the env vars (observed on Cloudflare Pages).
+const url =
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
+  "https://kimuffcujnvjcwawhspa.supabase.co";
 
-// Safe init — if env vars are missing the app still renders,
-// DB-backed features just return empty data.
-export const supabase: SupabaseClient = (() => {
-  if (!url || !key) {
-    console.warn("Supabase env vars not set — DB features disabled");
-    // Return a no-op client so imports don't crash
-    return createClient(
-      "https://placeholder.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTkwMDAwMDAwMH0.placeholder"
-    );
-  }
-  return createClient(url, key);
-})();
+const key =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
+  "sb_publishable_NlidneHXgOIG0xmUAhS2RQ_cUpxU4GF";
+
+export const supabase = createClient(url, key);
