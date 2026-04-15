@@ -280,7 +280,9 @@ export default function Home() {
             ॐ
           </span>
           <div>
-            <div className="text-base font-bold" style={{ color: P.primary }}>Shlokas</div>
+            <div className="text-base font-bold" style={{ color: P.primary }}>
+              {t("Shlokas", "ஸ்லோகாஸ்", "श्लोकाः")}
+            </div>
             <div className="text-xs opacity-50">{t("Your Sanskrit teacher", "உங்கள் ஆசிரியர்", "आपके शिक्षक")}</div>
           </div>
         </div>
