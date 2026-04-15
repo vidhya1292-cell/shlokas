@@ -694,30 +694,51 @@ function VerseCard({
           </>
         )}
 
-        {/* ── Hindi / English users: Devanagari is primary */}
-        {!isTamil && (
+        {/* ── Hindi users: Devanagari primary (they read it natively) */}
+        {isHindi && (
+          <p
+            className="text-center mb-4"
+            style={{
+              fontFamily: "'Noto Serif Devanagari', serif",
+              fontSize: 22,
+              color: P.text,
+              lineHeight: 2.1,
+              whiteSpace: "pre-line",
+            }}
+          >
+            {verse.sanskrit}
+          </p>
+        )}
+
+        {/* ── English users: IAST transliteration first (readable), Devanagari faded below */}
+        {!isTamil && !isHindi && (
           <>
             <p
-              className="text-center mb-3"
+              className="text-center mb-2"
+              style={{
+                fontFamily: "serif",
+                fontSize: 19,
+                color: P.text,
+                lineHeight: 2,
+                whiteSpace: "pre-line",
+                fontStyle: "italic",
+              }}
+            >
+              {verse.transliteration}
+            </p>
+            <p
+              className="text-center mb-4"
               style={{
                 fontFamily: "'Noto Serif Devanagari', serif",
-                fontSize: 22,
-                color: P.text,
-                lineHeight: 2.1,
+                fontSize: 15,
+                color: P.textMid,
+                lineHeight: 1.9,
                 whiteSpace: "pre-line",
+                opacity: 0.45,
               }}
             >
               {verse.sanskrit}
             </p>
-            {/* IAST transliteration only for English — Hindi speakers read Devanagari */}
-            {!isHindi && (
-              <p
-                className="text-center text-sm italic mb-4"
-                style={{ fontFamily: "serif", whiteSpace: "pre-line", color: P.textMid, opacity: 0.65 }}
-              >
-                {verse.transliteration}
-              </p>
-            )}
           </>
         )}
 
