@@ -1,11 +1,12 @@
 /**
- * Onboarding — shown to new users.
- * Three screens:
- *   1. Splash — Baby Krishna image, auto-advances after 1.8s (or on tap)
- *   2. Age group — Kids / Adults
- *   3. Language — Tamil / Hindi / English
+ * Onboarding — shown to new users (once only).
+ * Two screens:
+ *   1. Age group — Kids / Adults
+ *   2. Language — Tamil / Hindi / English
+ *
+ * The Baby Krishna splash is handled in App.tsx and shows on every launch.
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { loadProgress, saveProgress } from "../services/storage";
 import { DEFAULT_KIDS_VOICE, DEFAULT_VOICE } from "../services/sarvamService";
@@ -20,19 +21,12 @@ const P = {
   border:  "#DBEAFE",
 };
 
-type Screen = "splash" | "age" | "language";
+type Screen = "age" | "language";
 
 export default function Onboarding() {
   const [, navigate] = useLocation();
-  const [screen, setScreen] = useState<Screen>("splash");
+  const [screen, setScreen] = useState<Screen>("age");
   const [ageGroup, setAgeGroup] = useState<"kids" | "adults" | null>(null);
-
-  // Auto-advance from splash after 1.8s
-  useEffect(() => {
-    if (screen !== "splash") return;
-    const t = setTimeout(() => setScreen("age"), 1800);
-    return () => clearTimeout(t);
-  }, [screen]);
 
   const selectAge = (age: "kids" | "adults") => {
     setAgeGroup(age);
@@ -58,90 +52,6 @@ export default function Onboarding() {
       style={{ background: P.bg, color: P.text }}
     >
       <AnimatePresence mode="wait">
-
-        {/* ── Splash ─────────────────────────────────────────────────────── */}
-        {screen === "splash" && (
-          <motion.div
-            key="splash"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-            className="fixed inset-0 cursor-pointer select-none"
-            onClick={() => setScreen("age")}
-          >
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Baby_thief_Krishna_%28bazaar_art%2C_c.1950%27s%29.jpg"
-              alt="Baby Krishna"
-              className="absolute inset-0 w-full h-full object-cover object-top"
-            />
-
-            {/* Gradient overlay */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background: "linear-gradient(to top, rgba(10,15,40,0.92) 0%, rgba(10,15,40,0.45) 40%, transparent 70%)",
-              }}
-            />
-
-            <div className="absolute bottom-0 left-0 right-0 px-8 pb-14 flex flex-col items-center text-center">
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-                style={{
-                  fontFamily: "'Noto Serif Devanagari', serif",
-                  fontSize: 42,
-                  color: "#C4973A",
-                  lineHeight: 1,
-                  textShadow: "0 2px 16px rgba(196,151,58,0.5)",
-                }}
-              >
-                ॐ
-              </motion.p>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.55, duration: 0.6 }}
-                className="text-4xl font-bold mt-2 mb-1 text-white"
-                style={{ letterSpacing: "-0.5px" }}
-              >
-                Shlokas
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7, duration: 0.6 }}
-                className="text-sm mb-1"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                Learn · Chant · Remember
-              </motion.p>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8, duration: 0.6 }}
-                className="text-sm font-medium"
-                style={{ color: "#C4973A" }}
-              >
-                श्रीमद्भगवद्गीता
-              </motion.p>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2, duration: 0.6 }}
-                className="text-xs mt-10"
-                style={{ color: "rgba(255,255,255,0.3)" }}
-              >
-                Tap to continue
-              </motion.p>
-            </div>
-          </motion.div>
-        )}
 
         {/* ── Age Group ──────────────────────────────────────────────────── */}
         {screen === "age" && (

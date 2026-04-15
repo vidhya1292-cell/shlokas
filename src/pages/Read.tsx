@@ -10,6 +10,7 @@ import { loadProgress } from "../services/storage";
 import { getSections, type SectionEntry } from "../services/textsService";
 import { getBGVerses } from "../services/versesService";
 import type { Verse } from "../types";
+import { chapters as bgChapters } from "../data/bgData";
 import { DEITY_COLLECTIONS } from "../data/deityData";
 import { BHAJANS } from "../data/bhajanData";
 import {
@@ -34,6 +35,16 @@ const P = {
 
 type Tab = "gita" | "deity" | "bhajans";
 
+// Fallback chapter list from local data — always shows all 18 chapters
+// even when Supabase is unreachable (e.g. env vars missing in build)
+const FALLBACK_SECTIONS: SectionEntry[] = bgChapters.map((ch) => ({
+  id: ch.number,
+  textId: "bg",
+  number: ch.number,
+  name: ch.name,
+  slokaCount: ch.verseCount,
+}));
+
 export default function Read() {
   useLocation();
   const progress = loadProgress();
@@ -49,12 +60,18 @@ export default function Read() {
 
   // DB data
   const [sections, setSections] = useState<SectionEntry[]>([]);
+  const [loadingSections, setLoadingSections] = useState(true);
   const [chapterVerses, setChapterVerses] = useState<Verse[]>([]);
   const [loadingChapter, setLoadingChapter] = useState(false);
 
+  // Resolved chapter list: DB data when available, local fallback otherwise
+  const displaySections = sections.length > 0 ? sections : FALLBACK_SECTIONS;
+
   // Load BG sections on mount
   useEffect(() => {
-    getSections("bg").then(setSections).catch(() => {});
+    getSections("bg")
+      .then((data) => { setSections(data); setLoadingSections(false); })
+      .catch(() => { setLoadingSections(false); });
   }, []);
 
   // Audio state — tracks which item is currently playing
@@ -154,14 +171,14 @@ export default function Read() {
             {/* ── Level 1: Chapter list ───────────────────────────────────────── */}
             {selectedChapter === null && (
               <div className="px-4 pt-4 pb-6 flex flex-col gap-2">
-                {sections.length === 0 && (
-                  // Skeleton while sections load
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="w-full h-14 rounded-2xl animate-pulse"
-                      style={{ background: "#EEF2FF" }} />
-                  ))
-                )}
-                {sections.map((ch) => (
+                {/* Skeleton only while DB query is in-flight */}
+                {loadingSections && Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="w-full h-14 rounded-2xl animate-pulse"
+                    style={{ background: "#D4DEFF" }} />
+                ))}
+
+                {/* Chapter list — DB data when available, local fallback otherwise */}
+                {!loadingSections && displaySections.map((ch) => (
                   <button
                     key={ch.number}
                     onClick={() => openChapter(ch.number)}
@@ -215,7 +232,7 @@ export default function Read() {
                       {t(`Chapter ${selectedChapter}`, `அத்தியாயம் ${selectedChapter}`, `अध्याय ${selectedChapter}`)}
                     </p>
                     <p className="font-bold text-sm truncate" style={{ color: P.primary }}>
-                      {sections.find((c) => c.number === selectedChapter)?.name ?? ""}
+                      {displaySections.find((c) => c.number === selectedChapter)?.name ?? ""}
                     </p>
                   </div>
                 </div>
