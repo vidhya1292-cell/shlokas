@@ -134,7 +134,7 @@ export default function Read() {
         <div className="flex items-center gap-3 mb-3">
           <div>
             <h1 className="text-lg font-bold" style={{ color: P.primary }}>
-              {t("Scripture Library", "வேத நூலகம்", "ग्रंथ पुस्तकालय")}
+              {t("Reading", "வாசிப்பு", "पठन")}
             </h1>
             <p className="text-xs opacity-50">
               {t("Read · Reflect · Remember", "படி · சிந்தி · நினை", "पढ़ें · विचारें · याद करें")}

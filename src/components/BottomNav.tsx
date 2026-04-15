@@ -20,9 +20,14 @@ export default function BottomNav() {
       label: t("Home", "முகப்பு", "होम"),
     },
     {
+      path: "/session",
+      icon: "🎓",
+      label: t("Learning", "கற்றல்", "सीखें"),
+    },
+    {
       path: "/read",
-      icon: "📚",
-      label: t("Library", "நூலகம்", "पुस्तकालय"),
+      icon: "📖",
+      label: t("Reading", "வாசிப்பு", "पठन"),
     },
   ];
 

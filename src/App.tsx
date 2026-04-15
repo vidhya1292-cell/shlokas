@@ -73,7 +73,7 @@ function Router() {
     return <Redirect to="/onboarding" />;
   }
 
-  const showNav = location === "/" || location === "/read";
+  const showNav = location === "/" || location === "/read" || location === "/session";
 
   return (
     <>
