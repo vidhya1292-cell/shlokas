@@ -53,10 +53,56 @@ const MANTRAS = [
 ];
 
 const SCRIPTURE_AUDIO = [
-  { icon: "📖", labelEn: "Bhagavad Gita",     labelTA: "பகவத் கீதை",     labelHI: "भगवद्गीता",   sub: "18 chapters · Sanskrit" },
-  { icon: "🙏", labelEn: "Hanuman Chalisa",   labelTA: "ஹனுமான் சாலீசா", labelHI: "हनुमान चालीसा",sub: "43 verses · Awadhi" },
-  { icon: "🪷", labelEn: "Narayaneeyam",      labelTA: "நாராயணீயம்",     labelHI: "नारायणीयम्",   sub: "100 dasakams · Sanskrit" },
-  { icon: "🐒", labelEn: "Sundara Kanda",     labelTA: "சுந்தர காண்டம்", labelHI: "सुंदर काण्ड", sub: "68 sargas · Sanskrit" },
+  {
+    icon: "🙏",
+    labelEn: "Hanuman Chalisa",
+    labelTA: "ஹனுமான் சாலீசா",
+    labelHI: "हनुमान चालीसा",
+    sub: "43 verses · Awadhi",
+    artist: "M.S. Subbulakshmi",
+    mss: true,
+    url: "https://archive.org/details/HanumanChalisaMSSubbulakshmiwww.Mp3MaD.Com",
+  },
+  {
+    icon: "🕉️",
+    labelEn: "Vishnu Sahasranamam",
+    labelTA: "விஷ்ணு சஹஸ்ரநாமம்",
+    labelHI: "विष्णु सहस्रनाम",
+    sub: "1000 names · Sanskrit · 30 min",
+    artist: "M.S. Subbulakshmi",
+    mss: true,
+    url: "https://archive.org/details/VishnuSahasranamam_MSS",
+  },
+  {
+    icon: "📖",
+    labelEn: "Bhagavad Gita",
+    labelTA: "பகவத் கீதை",
+    labelHI: "भगवद्गीता",
+    sub: "18 chapters · Sanskrit + Hindi",
+    artist: "Shailendra Bharti",
+    mss: false,
+    url: "https://archive.org/details/bhagawad-geeta-audio-all-18-chapters-with-narration-shailendra-bharti",
+  },
+  {
+    icon: "🪷",
+    labelEn: "Narayaneeyam",
+    labelTA: "நாராயணீயம்",
+    labelHI: "नारायणीयम्",
+    sub: "100 dasakams · Sanskrit",
+    artist: "Shanbagavalli Natarajan",
+    mss: false,
+    url: "https://archive.org/details/Narayaneeyam_201701",
+  },
+  {
+    icon: "🐒",
+    labelEn: "Sundara Kanda",
+    labelTA: "சுந்தர காண்டம்",
+    labelHI: "सुंदர காண்ட",
+    sub: "68 sargas · Valmiki Sanskrit",
+    artist: "Dr. M.V.R. Sharma",
+    mss: false,
+    url: "https://archive.org/details/vrsundara",
+  },
 ];
 
 export default function Listen() {
@@ -249,10 +295,11 @@ export default function Listen() {
           </p>
           <div className="flex flex-col gap-3">
             {SCRIPTURE_AUDIO.map((s, i) => (
-              <div
+              <button
                 key={i}
-                className="rounded-2xl px-4 py-3.5 flex items-center gap-4"
-                style={{ background: P.card, border: `1.5px solid ${P.cardBorder}`, opacity: 0.7 }}
+                onClick={() => window.open(s.url, "_blank", "noopener,noreferrer")}
+                className="rounded-2xl px-4 py-3.5 flex items-center gap-4 w-full text-left transition-all active:scale-[0.98]"
+                style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}
               >
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
@@ -261,25 +308,31 @@ export default function Listen() {
                   {s.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm" style={{ color: P.primary }}>
-                    {isTamil ? s.labelTA : isHindi ? s.labelHI : s.labelEn}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-semibold text-sm" style={{ color: P.primary }}>
+                      {isTamil ? s.labelTA : isHindi ? s.labelHI : s.labelEn}
+                    </p>
+                    {s.mss && (
+                      <span
+                        className="text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ background: P.tint, color: P.gold, fontSize: 9 }}
+                      >
+                        MSS
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs opacity-45 mt-0.5">{s.sub}</p>
+                  <p className="text-xs mt-0.5" style={{ color: P.textMid, opacity: 0.7 }}>{s.artist}</p>
                 </div>
-                <span
-                  className="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
-                  style={{ background: P.tint, color: P.gold }}
-                >
-                  {t("Soon", "விரைவில்", "जल्द")}
-                </span>
-              </div>
+                <span style={{ color: P.primary, fontSize: 18, opacity: 0.5 }}>↗</span>
+              </button>
             ))}
           </div>
           <p className="text-xs text-center opacity-40 mt-3">
             {t(
-              "Full chapter playback coming — perfect for your daily 1-hour sadhana",
-              "தினசரி சாதனைக்கான முழு அத்தியாய ஆடியோ விரைவில்",
-              "दैनिक साधना के लिए पूर्ण अध्याय ऑडियो जल्द आ रहा है",
+              "Opens on archive.org · Free to stream",
+              "archive.org-ல் திறக்கும் · இலவச ஸ்ட்ரீம்",
+              "archive.org पर खुलेगा · मुफ़्त में सुनें",
             )}
           </p>
         </section>
