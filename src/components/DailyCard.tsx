@@ -59,7 +59,6 @@ async function buildShareCard(params: {
   const isHindi = language === "hi-IN";
 
   const W = 540, H = 760;
-  const IMG_H = 300;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -68,7 +67,7 @@ async function buildShareCard(params: {
 
   await document.fonts.ready;
 
-  // ── Load Krishna image (same-origin, no CORS issue) ──
+  // ── Load image (same-origin) ──
   const loadImage = (src: string): Promise<HTMLImageElement | null> =>
     new Promise((resolve) => {
       const img = new Image();
@@ -77,15 +76,11 @@ async function buildShareCard(params: {
       img.src = src;
     });
 
-  // ── White background for bottom section ──
-  ctx.fillStyle = "#F5F7FF";
-  ctx.fillRect(0, 0, W, H);
-
-  // ── Draw god image (cover crop) or fallback gradient ──
+  // ── Draw god image full-bleed (cover crop entire canvas) ──
   const godImg = await loadImage(krishnaImg);
   if (godImg) {
     const srcAspect = godImg.naturalWidth / godImg.naturalHeight;
-    const dstAspect = W / IMG_H;
+    const dstAspect = W / H;
     let sx = 0, sy = 0, sw = godImg.naturalWidth, sh = godImg.naturalHeight;
     if (srcAspect > dstAspect) {
       sw = sh * dstAspect;
@@ -93,100 +88,85 @@ async function buildShareCard(params: {
     } else {
       sh = sw / dstAspect;
     }
-    ctx.drawImage(godImg, sx, sy, sw, sh, 0, 0, W, IMG_H);
+    ctx.drawImage(godImg, sx, sy, sw, sh, 0, 0, W, H);
   } else {
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, IMG_H);
+    // Fallback: deep blue gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
     bgGrad.addColorStop(0, "#1E3A8A");
     bgGrad.addColorStop(1, "#2D52C4");
     ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, W, IMG_H);
+    ctx.fillRect(0, 0, W, H);
   }
 
-  // ── Dark overlay on image for text readability ──
-  const overlayGrad = ctx.createLinearGradient(0, 0, 0, IMG_H);
-  overlayGrad.addColorStop(0, "rgba(10,20,60,0.18)");
-  overlayGrad.addColorStop(0.5, "rgba(10,20,60,0.25)");
-  overlayGrad.addColorStop(1, "rgba(10,20,60,0.88)");
-  ctx.fillStyle = overlayGrad;
-  ctx.fillRect(0, 0, W, IMG_H);
+  // ── Top scrim (for OM + app name) ──
+  const topScrim = ctx.createLinearGradient(0, 0, 0, 160);
+  topScrim.addColorStop(0, "rgba(5,10,30,0.72)");
+  topScrim.addColorStop(1, "rgba(5,10,30,0)");
+  ctx.fillStyle = topScrim;
+  ctx.fillRect(0, 0, W, 160);
 
-  // ── Top: OM + App name ──
+  // ── Bottom scrim (for panchang + quote) ──
+  const bottomScrim = ctx.createLinearGradient(0, H - 280, 0, H);
+  bottomScrim.addColorStop(0, "rgba(5,10,30,0)");
+  bottomScrim.addColorStop(0.25, "rgba(5,10,30,0.65)");
+  bottomScrim.addColorStop(1, "rgba(5,10,30,0.96)");
+  ctx.fillStyle = bottomScrim;
+  ctx.fillRect(0, H - 280, W, 280);
+
+  // ── TOP: OM + App name ──
   ctx.textAlign = "center";
-  ctx.font = "bold 52px 'Noto Serif Devanagari', serif";
+  ctx.font = "bold 56px 'Noto Serif Devanagari', serif";
   ctx.fillStyle = "#C4973A";
-  ctx.fillText("ॐ", W / 2, 68);
+  ctx.fillText("ॐ", W / 2, 72);
 
-  ctx.font = "bold 18px sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillText("Shlokas.in", W / 2, 100);
+  ctx.font = "bold 17px sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.88)";
+  ctx.fillText("Shlokas.in", W / 2, 104);
 
-  // ── Panchang info at bottom of image ──
+  // ── BOTTOM: Panchang ──
   const monthLabel = isTamil ? month.nameTA : isHindi ? month.nameHI : month.nameEN;
   const tithiLabel = isTamil ? tithi.nameTA : isHindi ? tithi.nameHI : tithi.nameEN;
-  const deityName = isTamil ? deity.nameTA : isHindi ? deity.nameHI : deity.name;
-  const dayLabel = isTamil ? deity.dayTA : isHindi ? deity.dayHI : deity.dayEN;
+  const deityName  = isTamil ? deity.nameTA : isHindi ? deity.nameHI : deity.name;
+  const dayLabel   = isTamil ? deity.dayTA  : isHindi ? deity.dayHI  : deity.dayEN;
 
+  // Panchang line
   ctx.textAlign = "left";
-  ctx.font = "bold 20px 'Noto Serif Devanagari', 'Noto Sans Tamil', sans-serif";
+  ctx.font = "bold 22px 'Noto Serif Devanagari', 'Noto Sans Tamil', sans-serif";
   ctx.fillStyle = "#FFD87A";
-  ctx.fillText(`${monthLabel}  ·  ${tithiLabel}`, 28, IMG_H - 52);
+  ctx.fillText(`${monthLabel}  ·  ${tithiLabel}`, 32, H - 188);
 
+  // Deity line
   ctx.font = "15px 'Noto Sans Tamil', sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.82)";
-  ctx.fillText(`${deity.symbol} ${deityName}  ·  ${dayLabel}`, 28, IMG_H - 28);
+  ctx.fillStyle = "rgba(255,255,255,0.78)";
+  ctx.fillText(`${deity.symbol} ${deityName}  ·  ${dayLabel}`, 32, H - 162);
 
+  // Festival (right-aligned)
   if (festival) {
     const festName = isTamil ? festival.nameTA : isHindi ? festival.nameHI : festival.nameEN;
     ctx.textAlign = "right";
     ctx.font = "bold 13px sans-serif";
     ctx.fillStyle = "#FFD87A";
-    ctx.fillText(`🎉 ${festName}`, W - 28, IMG_H - 28);
+    ctx.fillText(`🎉 ${festName}`, W - 32, H - 162);
   }
 
-  // ── White card area ──
-  const cardY = IMG_H + 10;
-  ctx.fillStyle = "#FFFFFF";
-  ctx.beginPath();
-  (ctx as any).roundRect?.(20, cardY, W - 40, H - cardY - 20, 20)
-    ?? ctx.rect(20, cardY, W - 40, H - cardY - 20);
-  ctx.fill();
-
-  // Gold top border on card
-  ctx.strokeStyle = "#C4973A";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(60, cardY + 2); ctx.lineTo(W - 60, cardY + 2);
-  ctx.stroke();
-
-  // ── Quote ──
-  const quoteText = isTamil ? quote.ta : isHindi ? quote.hi : quote.en;
-  ctx.fillStyle = "#1E2D5A";
-  ctx.font = "italic 18px 'Noto Serif Devanagari', 'Noto Sans Tamil', Georgia, serif";
-  ctx.textAlign = "center";
-  const quoteEndY = wrapText(ctx, `"${quoteText}"`, W / 2, W - 100, 30, cardY + 52);
-
-  // ── Original line ──
-  ctx.font = "15px 'Noto Serif Devanagari', serif";
-  ctx.fillStyle = "#4B6CB7";
-  const origLine = quote.original.split("\n")[0];
-  wrapText(ctx, origLine, W / 2, W - 100, 24, quoteEndY + 6);
-
-  // Source
-  ctx.font = "bold 14px sans-serif";
-  ctx.fillStyle = "#C4973A";
-  ctx.fillText(`— ${quote.sourceShort}`, W / 2, quoteEndY + 54);
-
-  // ── Gold divider ──
-  ctx.strokeStyle = "rgba(196,151,58,0.4)";
+  // Gold thin divider
+  ctx.strokeStyle = "rgba(196,151,58,0.55)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(60, H - 70); ctx.lineTo(W - 60, H - 70);
+  ctx.moveTo(32, H - 144); ctx.lineTo(W - 32, H - 144);
   ctx.stroke();
 
-  // ── Footer ──
-  ctx.font = "bold 15px sans-serif";
-  ctx.fillStyle = "#1E3A8A";
-  ctx.fillText("🕉️  Learn Sanskrit · Shlokas.in", W / 2, H - 42);
+  // ── Quote (italic, white) — max 3 lines ──
+  const quoteText = isTamil ? quote.ta : isHindi ? quote.hi : quote.en;
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.font = "italic 17px 'Noto Serif Devanagari', 'Noto Sans Tamil', Georgia, serif";
+  ctx.textAlign = "center";
+  wrapText(ctx, `"${quoteText}"`, W / 2, W - 80, 28, H - 124);
+
+  // Source
+  ctx.font = "bold 13px sans-serif";
+  ctx.fillStyle = "#FFD87A";
+  ctx.fillText(`— ${quote.sourceShort}`, W / 2, H - 26);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 0.92));
 }
@@ -264,7 +244,6 @@ export default function DailyCard({ language }: Props) {
   const handleShare = async () => {
     setSharing(true);
     const shareParams = { quote, deity, tithi, month, festival, language, krishnaImg };
-    const text = buildShareText({ quote, deity, tithi, month, festival, language });
 
     try {
       const blob = await buildShareCard(shareParams);
@@ -285,7 +264,7 @@ export default function DailyCard({ language }: Props) {
         }
       }
 
-      // ── Path 2: download image + open WhatsApp text ──
+      // ── Path 2: download image only (user can share manually) ──
       if (blob) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -294,11 +273,9 @@ export default function DailyCard({ language }: Props) {
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
 
     } catch {
-      // Canvas generation failed — text only
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+      // ignore
     } finally {
       setSharing(false);
       setDone(true);
