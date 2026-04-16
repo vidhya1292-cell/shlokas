@@ -173,10 +173,102 @@ export default function Home() {
           </p>
         </div>
 
+        {/* ── Sadhana tiles ── */}
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
+            {t("Where do you want to start?", "எங்கிருந்து தொடங்க விரும்புகிறீர்கள்?", "कहाँ से शुरू करना चाहेंगे?")}
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+
+            {/* Learn */}
+            <button
+              onClick={() => navigate(hasStartedLearning ? "/session" : "/learn")}
+              className="rounded-2xl flex flex-col items-center py-5 px-2 gap-2 transition-all active:scale-[0.96] relative"
+              style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}
+            >
+              {dueCount > 0 && (
+                <span
+                  className="absolute top-2 right-2 text-xs font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: "#FEE2E2", color: "#DC2626", fontSize: 9, lineHeight: 1.4 }}
+                >
+                  {dueCount}
+                </span>
+              )}
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+                style={{ background: P.tint }}
+              >
+                🎓
+              </div>
+              <p className="text-sm font-bold" style={{ color: P.primary }}>
+                {t("Learn", "கற்க", "सीखें")}
+              </p>
+              {hasStartedLearning ? (
+                <div className="w-full px-1">
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: P.tint }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.max(2, Math.round((masteredCount / (activeMeta.totalVerses || 1)) * 100))}%`,
+                        background: P.gold,
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs opacity-40 text-center" style={{ fontSize: 10 }}>
+                  {t("Start →", "தொடங்கு →", "शुरू करें →")}
+                </p>
+              )}
+            </button>
+
+            {/* Read */}
+            <button
+              onClick={() => navigate("/read")}
+              className="rounded-2xl flex flex-col items-center py-5 px-2 gap-2 transition-all active:scale-[0.96]"
+              style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}
+            >
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+                style={{ background: "#EEF2FF" }}
+              >
+                📖
+              </div>
+              <p className="text-sm font-bold" style={{ color: P.primary }}>
+                {t("Read", "படி", "पढ़ें")}
+              </p>
+              <p className="text-xs opacity-40 text-center" style={{ fontSize: 10 }}>
+                {t("BG · HC · Ramayana", "BG · HC · இராமாயணம்", "BG · HC · रामायण")}
+              </p>
+            </button>
+
+            {/* Listen */}
+            <button
+              onClick={() => navigate("/listen")}
+              className="rounded-2xl flex flex-col items-center py-5 px-2 gap-2 transition-all active:scale-[0.96]"
+              style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}
+            >
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+                style={{ background: "#F0FDF4" }}
+              >
+                🎧
+              </div>
+              <p className="text-sm font-bold" style={{ color: P.primary }}>
+                {t("Listen", "கேள்", "सुनें")}
+              </p>
+              <p className="text-xs opacity-40 text-center" style={{ fontSize: 10 }}>
+                {t("Chants · Audio", "மந்திரம் · ஆடியோ", "जप · ऑडियो")}
+              </p>
+            </button>
+
+          </div>
+        </div>
+
         {/* Daily card — Krishna image + panchang + WhatsApp share */}
         <DailyCard language={progress.language ?? "en-IN"} />
 
-        {/* ── Quick Japa ── */}
+        {/* ── Japa ── */}
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
             🕉️ {t("Japa", "ஜபம்", "जप")}
@@ -219,134 +311,6 @@ export default function Home() {
           <p className="text-xs text-center opacity-35 mt-2">
             {t("Tap · chants × 3", "தட்டவும் · 3 முறை ஜபம்", "टैप करें · × 3 जप")}
           </p>
-        </div>
-
-        {/* Continue / Start section */}
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
-            {isNewUser
-              ? t("Begin your sadhana", "உங்கள் ஸாதனை தொடங்குங்கள்", "अपनी साधना शुरू करें")
-              : t("Continue where you left off", "தொடர்ந்து படிக்க", "जहाँ छोड़ा वहाँ से शुरू करें")}
-          </p>
-          <div className="flex flex-col gap-3">
-
-            {/* ── Continue Learning ── */}
-            <button
-              onClick={() => navigate(hasStartedLearning ? "/session" : "/learn")}
-              className="w-full rounded-2xl text-left transition-all active:scale-[0.98]"
-              style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}
-            >
-              <div className="px-4 py-3.5 flex items-center gap-4">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-2xl"
-                  style={{ background: P.tint }}
-                >
-                  {activeMeta.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="font-bold text-sm" style={{ color: P.primary }}>
-                      {t("Learn", "கற்க", "सीखें")} · {isTamil ? activeMeta.titleTA : isHindi ? activeMeta.titleHI : activeMeta.titleEN}
-                    </p>
-                    {dueCount > 0 && (
-                      <span
-                        className="text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0"
-                        style={{ background: "#FEE2E2", color: "#DC2626" }}
-                      >
-                        {dueCount} {t("due", "நிலுவை", "बाकी")}
-                      </span>
-                    )}
-                  </div>
-                  {hasStartedLearning ? (
-                    <p className="text-xs opacity-55">
-                      {t(
-                        `Ch. ${currentChapter} · ${masteredCount} verses mastered`,
-                        `அத்தியாயம் ${currentChapter} · ${masteredCount} மனப்பாடம்`,
-                        `अध्याय ${currentChapter} · ${masteredCount} याद किया`,
-                      )}
-                    </p>
-                  ) : (
-                    <p className="text-xs opacity-55">
-                      {t("Start your learning journey →", "கற்கத் தொடங்கு →", "सीखना शुरू करें →")}
-                    </p>
-                  )}
-                </div>
-                <span style={{ color: P.primary, fontSize: 20, opacity: 0.5 }}>›</span>
-              </div>
-              {hasStartedLearning && (
-                <div className="px-4 pb-3.5">
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: P.tint }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.max(2, Math.round((masteredCount / (activeMeta.totalVerses || 1)) * 100))}%`,
-                        background: P.gold,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-            </button>
-
-            {/* ── Continue Reading ── */}
-            <button
-              onClick={() => navigate("/read")}
-              className="w-full rounded-2xl text-left transition-all active:scale-[0.98]"
-              style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}
-            >
-              <div className="px-4 py-3.5 flex items-center gap-4">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-2xl"
-                  style={{ background: "#EEF2FF" }}
-                >
-                  📖
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm" style={{ color: P.primary }}>
-                    {t("Read", "படி", "पढ़ें")}
-                  </p>
-                  <p className="text-xs opacity-55 mt-0.5">
-                    {t(
-                      "Scriptures · Sundara Kanda · Devotional",
-                      "வேதங்கள் · சுந்தர காண்டம் · பக்தி",
-                      "शास्त्र · सुंदर काण्ड · भक्ति",
-                    )}
-                  </p>
-                </div>
-                <span style={{ color: P.primary, fontSize: 20, opacity: 0.5 }}>›</span>
-              </div>
-            </button>
-
-            {/* ── Continue Listening ── */}
-            <button
-              onClick={() => navigate("/listen")}
-              className="w-full rounded-2xl text-left transition-all active:scale-[0.98]"
-              style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}
-            >
-              <div className="px-4 py-3.5 flex items-center gap-4">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-2xl"
-                  style={{ background: "#F0FDF4" }}
-                >
-                  🎧
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm" style={{ color: P.primary }}>
-                    {t("Listen", "கேள்", "सुनें")}
-                  </p>
-                  <p className="text-xs opacity-55 mt-0.5">
-                    {t(
-                      "Mantra chanting · Scripture audio",
-                      "மந்திர ஜபம் · வேத ஆடியோ",
-                      "मंत्र जप · शास्त्र ऑडियो",
-                    )}
-                  </p>
-                </div>
-                <span style={{ color: P.primary, fontSize: 20, opacity: 0.5 }}>›</span>
-              </div>
-            </button>
-
-          </div>
         </div>
 
         {/* Streak nudge (only if active) */}
