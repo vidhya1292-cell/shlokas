@@ -67,7 +67,7 @@ export default function Account() {
   };
 
   const cycleAgeGroup = () => {
-    const next = progress.ageGroup === "kids" ? "adults" : "kids";
+    const next: "kids" | "adults" = progress.ageGroup === "kids" ? "adults" : "kids";
     const updated = { ...progress, ageGroup: next };
     saveProgress(updated);
     setProgress(updated);
