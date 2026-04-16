@@ -1,7 +1,6 @@
 /**
  * Listen tab — pure audio mode.
- * Mantra chanting player + scripture audio cards.
- * Read tab handles text. This tab is eyes-closed, ears-open.
+ * Mantra chanting player + scripture audio cards (in-app streaming).
  */
 import { useState, useRef, useCallback } from "react";
 import { loadProgress } from "../services/storage";
@@ -54,16 +53,18 @@ const MANTRAS = [
 
 const SCRIPTURE_AUDIO = [
   {
+    id: "hanuman_chalisa",
     icon: "🙏",
     labelEn: "Hanuman Chalisa",
     labelTA: "ஹனுமான் சாலீசா",
     labelHI: "हनुमान चालीसा",
-    sub: "43 verses · Awadhi",
+    sub: "43 verses · Awadhi · ~10 min",
     artist: "M.S. Subbulakshmi",
     mss: true,
-    url: "https://archive.org/details/HanumanChalisaMSSubbulakshmiwww.Mp3MaD.Com",
+    audioUrl: "https://archive.org/download/HanumanChalisaMSSubbulakshmiwww.Mp3MaD.Com/Hanuman_Chalisa-M_S_Subbulakshmi%5Bwww.Mp3MaD.Com%5D.mp3",
   },
   {
+    id: "vishnu_sahasranamam",
     icon: "🕉️",
     labelEn: "Vishnu Sahasranamam",
     labelTA: "விஷ்ணு சஹஸ்ரநாமம்",
@@ -71,37 +72,40 @@ const SCRIPTURE_AUDIO = [
     sub: "1000 names · Sanskrit · 30 min",
     artist: "M.S. Subbulakshmi",
     mss: true,
-    url: "https://archive.org/details/VishnuSahasranamam_MSS",
+    audioUrl: "https://archive.org/download/VishnuSahasranamam_MSS/Vishnu%20Sahasranamam.mp3",
   },
   {
+    id: "bhagavad_gita",
     icon: "📖",
     labelEn: "Bhagavad Gita",
     labelTA: "பகவத் கீதை",
     labelHI: "भगवद्गीता",
-    sub: "18 chapters · Sanskrit + Hindi",
+    sub: "Chapter 1 · Sanskrit + Hindi",
     artist: "Shailendra Bharti",
     mss: false,
-    url: "https://archive.org/details/bhagawad-geeta-audio-all-18-chapters-with-narration-shailendra-bharti",
+    audioUrl: "https://archive.org/download/bhagawad-geeta-audio-all-18-chapters-with-narration-shailendra-bharti/Chapter%2001%20-%20Vishada%20Yoga%20-%20Shailendra%20Bharti.mp3",
   },
   {
+    id: "narayaneeyam",
     icon: "🪷",
     labelEn: "Narayaneeyam",
     labelTA: "நாராயணீயம்",
     labelHI: "नारायणीयम्",
-    sub: "100 dasakams · Sanskrit",
+    sub: "Dasakam 1–5 · Sanskrit",
     artist: "Shanbagavalli Natarajan",
     mss: false,
-    url: "https://archive.org/details/Narayaneeyam_201701",
+    audioUrl: "https://archive.org/download/Narayaneeyam_201701/01-Narayaneeyam-Ch%2001-05.mp3",
   },
   {
+    id: "sundara_kanda",
     icon: "🐒",
     labelEn: "Sundara Kanda",
     labelTA: "சுந்தர காண்டம்",
-    labelHI: "सुंदர காண்ட",
-    sub: "68 sargas · Valmiki Sanskrit",
+    labelHI: "सुंदर काण्ड",
+    sub: "Sarga 1 · Valmiki Sanskrit",
     artist: "Dr. M.V.R. Sharma",
     mss: false,
-    url: "https://archive.org/details/vrsundara",
+    audioUrl: "https://archive.org/download/vrsundara/Sundara01.mp3",
   },
 ];
 
@@ -111,7 +115,7 @@ export default function Listen() {
   const isHindi = progress.language === "hi-IN";
   const t = (en: string, ta: string, hi: string) => (isTamil ? ta : isHindi ? hi : en);
 
-  // Chanting player state
+  // ── Mantra player state ──
   const [chantIdx, setChantIdx] = useState(0);
   const [mantraPlaying, setMantraPlaying] = useState(false);
   const [mantraLoading, setMantraLoading] = useState(false);
@@ -119,6 +123,11 @@ export default function Listen() {
   const [mantraPlayCount, setMantraPlayCount] = useState(0);
   const mantraAudioRef = useRef<HTMLAudioElement | null>(null);
   const mantraTargetRef = useRef(0);
+
+  // ── Scripture player state ──
+  const [scripturePlayingId, setScripturePlayingId] = useState<string | null>(null);
+  const [scriptureLoadingId, setScriptureLoadingId] = useState<string | null>(null);
+  const scriptureAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopMantra = useCallback(() => {
     if (mantraAudioRef.current) {
@@ -131,8 +140,19 @@ export default function Listen() {
     setMantraPlayCount(0);
   }, []);
 
+  const stopScripture = useCallback(() => {
+    if (scriptureAudioRef.current) {
+      scriptureAudioRef.current.pause();
+      scriptureAudioRef.current.src = "";
+      scriptureAudioRef.current = null;
+    }
+    setScripturePlayingId(null);
+    setScriptureLoadingId(null);
+  }, []);
+
   const playChant = useCallback(async () => {
     if (mantraPlaying) { stopMantra(); return; }
+    stopScripture();
     setMantraLoading(true);
     setMantraPlayCount(0);
     let localCount = 0;
@@ -161,7 +181,26 @@ export default function Listen() {
     } finally {
       setMantraLoading(false);
     }
-  }, [mantraPlaying, chantIdx, stopMantra]);
+  }, [mantraPlaying, chantIdx, stopMantra, stopScripture]);
+
+  const playScripture = useCallback(async (id: string, audioUrl: string) => {
+    if (scripturePlayingId === id) { stopScripture(); return; }
+    stopScripture();
+    stopMantra();
+    setScriptureLoadingId(id);
+    try {
+      const audio = new Audio(audioUrl);
+      scriptureAudioRef.current = audio;
+      audio.onended = () => { setScripturePlayingId(null); scriptureAudioRef.current = null; };
+      audio.onerror = () => { setScripturePlayingId(null); setScriptureLoadingId(null); };
+      await audio.play();
+      setScripturePlayingId(id);
+    } catch {
+      setScripturePlayingId(null);
+    } finally {
+      setScriptureLoadingId(null);
+    }
+  }, [scripturePlayingId, stopScripture, stopMantra]);
 
   const prevChant = () => { stopMantra(); setChantIdx((i) => (i + MANTRAS.length - 1) % MANTRAS.length); };
   const nextChant = () => { stopMantra(); setChantIdx((i) => (i + 1) % MANTRAS.length); };
@@ -198,19 +237,15 @@ export default function Listen() {
           </p>
 
           <div className="rounded-2xl p-5" style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}>
-            {/* Mantra display */}
             <div className="flex items-center gap-3 mb-5">
               <button
                 onClick={prevChant}
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 text-xl font-bold"
                 style={{ background: P.tint, color: P.primary, border: `1px solid ${P.cardBorder}` }}
-                aria-label="Previous mantra"
               >‹</button>
 
               <div className="flex-1 text-center">
-                <div
-                  style={{ fontFamily: "'Noto Serif Devanagari', serif", fontSize: 36, color: P.primary, lineHeight: 1.2 }}
-                >
+                <div style={{ fontFamily: "'Noto Serif Devanagari', serif", fontSize: 36, color: P.primary, lineHeight: 1.2 }}>
                   {mantra.symbol}
                 </div>
                 <div className="text-sm font-semibold mt-1" style={{ color: P.text }}>{mantraLabel}</div>
@@ -221,11 +256,9 @@ export default function Listen() {
                 onClick={nextChant}
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 text-xl font-bold"
                 style={{ background: P.tint, color: P.primary, border: `1px solid ${P.cardBorder}` }}
-                aria-label="Next mantra"
               >›</button>
             </div>
 
-            {/* Dot indicators */}
             <div className="flex justify-center gap-2 mb-5">
               {MANTRAS.map((_, i) => (
                 <div
@@ -236,7 +269,6 @@ export default function Listen() {
               ))}
             </div>
 
-            {/* Play button */}
             <button
               onClick={() => { unlockAudioContext(); unlockChantingAudio(); playChant(); }}
               disabled={mantraLoading}
@@ -260,7 +292,6 @@ export default function Listen() {
               )}
             </button>
 
-            {/* Repeat count */}
             <div className="mt-4">
               <p className="text-xs text-center opacity-45 mb-2">
                 {t("Repeat count", "திரும்ப எண்", "दोहराने की संख्या")}
@@ -294,46 +325,60 @@ export default function Listen() {
             {t("Scripture Audio", "வேத ஆடியோ", "शास्त्र ऑडियो")}
           </p>
           <div className="flex flex-col gap-3">
-            {SCRIPTURE_AUDIO.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => window.open(s.url, "_blank", "noopener,noreferrer")}
-                className="rounded-2xl px-4 py-3.5 flex items-center gap-4 w-full text-left transition-all active:scale-[0.98]"
-                style={{ background: P.card, border: `1.5px solid ${P.cardBorder}` }}
-              >
+            {SCRIPTURE_AUDIO.map((s) => {
+              const isPlaying = scripturePlayingId === s.id;
+              const isLoading = scriptureLoadingId === s.id;
+              return (
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: P.tint, fontSize: 22 }}
+                  key={s.id}
+                  className="rounded-2xl px-4 py-3.5 flex items-center gap-4"
+                  style={{
+                    background: isPlaying ? "#EEF2FF" : P.card,
+                    border: `1.5px solid ${isPlaying ? P.primary : P.cardBorder}`,
+                  }}
                 >
-                  {s.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="font-semibold text-sm" style={{ color: P.primary }}>
-                      {isTamil ? s.labelTA : isHindi ? s.labelHI : s.labelEn}
-                    </p>
-                    {s.mss && (
-                      <span
-                        className="text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0"
-                        style={{ background: P.tint, color: P.gold, fontSize: 9 }}
-                      >
-                        MSS
-                      </span>
-                    )}
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-2xl"
+                    style={{ background: P.tint }}
+                  >
+                    {s.icon}
                   </div>
-                  <p className="text-xs opacity-45 mt-0.5">{s.sub}</p>
-                  <p className="text-xs mt-0.5" style={{ color: P.textMid, opacity: 0.7 }}>{s.artist}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-sm" style={{ color: P.primary }}>
+                        {isTamil ? s.labelTA : isHindi ? s.labelHI : s.labelEn}
+                      </p>
+                      {s.mss && (
+                        <span
+                          className="font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                          style={{ background: P.tint, color: P.gold, fontSize: 9 }}
+                        >
+                          MSS
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs opacity-45 mt-0.5">{s.sub}</p>
+                    <p className="text-xs mt-0.5" style={{ color: P.textMid, opacity: 0.7 }}>{s.artist}</p>
+                  </div>
+                  <button
+                    onClick={() => { unlockAudioContext(); unlockChantingAudio(); playScripture(s.id, s.audioUrl); }}
+                    disabled={isLoading}
+                    className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 disabled:opacity-60"
+                    style={{
+                      background: isPlaying ? P.primary : P.tint,
+                      border: `1.5px solid ${isPlaying ? P.primary : P.cardBorder}`,
+                      fontSize: 16,
+                      color: isPlaying ? "white" : P.primary,
+                    }}
+                  >
+                    {isLoading ? "⏳" : isPlaying ? "⏸" : "▶"}
+                  </button>
                 </div>
-                <span style={{ color: P.primary, fontSize: 18, opacity: 0.5 }}>↗</span>
-              </button>
-            ))}
+              );
+            })}
           </div>
           <p className="text-xs text-center opacity-40 mt-3">
-            {t(
-              "Opens on archive.org · Free to stream",
-              "archive.org-ல் திறக்கும் · இலவச ஸ்ட்ரீம்",
-              "archive.org पर खुलेगा · मुफ़्त में सुनें",
-            )}
+            {t("Streams directly · archive.org", "நேரடியாக ஸ்ட்ரீம் · archive.org", "सीधे स्ट्रीम · archive.org")}
           </p>
         </section>
 
