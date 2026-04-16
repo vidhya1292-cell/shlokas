@@ -72,7 +72,7 @@ const TILES = [
   {
     id: "devotional" as ReadView,
     icon: "🪔",
-    en: "Devotional",         ta: "பக்தி",              hi: "भक्ति",
+    en: "Stotras & Bhajans",  ta: "ஸ்தோத்திரங்கள் & பஜன்கள்", hi: "स्तोत्र & भजन",
     subEn: "Deity shlokas · Bhajans",
     subTa: "தெய்வ ஸ்லோகங்கள் · பஜன்கள்",
     subHi: "देवता श्लोक · भजन",
@@ -165,7 +165,7 @@ export default function Read() {
     ? t("Hanuman Chalisa", "ஹனுமான் சாலீசா", "हनुमान चालीसा")
     : view === "ramayana_sundara"
     ? t("Sundara Kanda", "சுந்தர காண்டம்", "सुंदर काण्ड")
-    : t("Devotional", "பக்தி", "भक्ति");
+    : t("Stotras & Bhajans", "ஸ்தோத்திரங்கள் & பஜன்கள்", "स्तोत्र & भजन");
 
   return (
     <div
@@ -231,7 +231,7 @@ export default function Read() {
             {/* ── Puranas ── */}
             <div>
               <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
-                🐒 {t("Puranas", "புராணங்கள்", "पुराण")}
+                🐒 {t("Ramayana", "ராமாயணம்", "रामायण")}
               </p>
               <button
                 onClick={() => { setView("ramayana_sundara"); contentRef.current?.scrollTo({ top: 0 }); }}
@@ -254,7 +254,7 @@ export default function Read() {
             {/* ── Other Shlokas / Bhajans ── */}
             <div>
               <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
-                🪔 {t("Other Shlokas / Bhajans", "பக்தி ஸ்லோகங்கள் / பஜன்கள்", "भक्ति श्लोक / भजन")}
+                🪔 {t("Stotras & Bhajans", "ஸ்தோத்திரங்கள் & பஜன்கள்", "स्तोत्र & भजन")}
               </p>
               <button
                 onClick={() => { setView("devotional"); contentRef.current?.scrollTo({ top: 0 }); }}
