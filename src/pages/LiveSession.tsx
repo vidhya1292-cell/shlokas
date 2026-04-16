@@ -187,7 +187,7 @@ export default function LiveSession() {
     return (
       <div
         className="min-h-screen w-full max-w-[480px] mx-auto px-6 flex flex-col items-center justify-center"
-        style={{ background: "#F5F7FF", color: "#1E2D5A" }}
+        style={{ background: "linear-gradient(to bottom, transparent 0px, transparent 60px, #FDF8F0 260px)", color: "#1E2D5A" }}
       >
         <motion.div
           initial={{ scale: 0 }}
@@ -249,7 +249,7 @@ export default function LiveSession() {
     return (
       <div
         className="min-h-screen w-full max-w-[480px] mx-auto flex flex-col items-center justify-center px-6"
-        style={{ background: "#F5F7FF", color: "#1E2D5A" }}
+        style={{ background: "linear-gradient(to bottom, transparent 0px, transparent 60px, #FDF8F0 260px)", color: "#1E2D5A" }}
       >
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -300,7 +300,7 @@ export default function LiveSession() {
   return (
     <div
       className="min-h-screen w-full max-w-[480px] mx-auto flex flex-col"
-      style={{ background: "#F5F7FF", color: "#1E2D5A" }}
+      style={{ background: "linear-gradient(to bottom, transparent 0px, transparent 60px, #FDF8F0 260px)", color: "#1E2D5A" }}
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">

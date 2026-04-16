@@ -1,5 +1,24 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
+/* ── Global app background — Neev-Tales-style golden divine light ────────── */
+/* Layered background: fade gradient sits on top of illustration, no z-index tricks needed */
+html, body {
+  background-color: #FDF8F0;
+  background-image:
+    linear-gradient(to bottom,
+      transparent 0px,
+      transparent 120px,
+      rgba(253,248,240,0.6) 200px,
+      rgba(253,248,240,0.95) 280px,
+      #FDF8F0 340px
+    ),
+    url('/bg/home_bg.jpg');
+  background-size: 480px 340px, 480px auto;
+  background-repeat: no-repeat, no-repeat;
+  background-position: top center, top center;
+  background-attachment: scroll, scroll;
+}
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));

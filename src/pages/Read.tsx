@@ -125,12 +125,12 @@ export default function Read() {
   return (
     <div
       className="min-h-screen w-full max-w-[480px] mx-auto flex flex-col"
-      style={{ background: P.bg, color: P.text }}
+      style={{ background: "linear-gradient(to bottom, transparent 0px, transparent 60px, #FDF8F0 260px)", color: P.text }}
     >
       {/* ── Header bar ────────────────────────────────────────────────────── */}
       <div
         className="sticky top-0 z-20 px-4 pt-4 pb-0"
-        style={{ background: P.bg, borderBottom: `1px solid ${P.cardBorder}` }}
+        style={{ background: "rgba(253,248,240,0.92)", backdropFilter: "blur(8px)", borderBottom: `1px solid ${P.cardBorder}` }}
       >
         <div className="flex items-center gap-3 mb-3">
           <div>

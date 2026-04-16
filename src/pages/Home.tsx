@@ -4,6 +4,7 @@ import { TOTAL_VERSES, chapters, verses as allVerses } from "../data/bgData";
 import { getBGVerseOfDay } from "../services/versesService";
 import { DEITY_COLLECTIONS } from "../data/deityData";
 import { BHAJANS } from "../data/bhajanData";
+import DailyCard from "../components/DailyCard";
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { UserProgress } from "../types";
 import {
@@ -19,12 +20,12 @@ import { getMantraAudioUrl } from "../services/jiosaavnService";
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 const P = {
-  bg:         "#F5F7FF",
+  bg:         "#FDF8F0",
   card:       "#FFFFFF",
-  cardBorder: "#DBEAFE",
+  cardBorder: "#E8DCC8",
   primary:    "#1E3A8A",
   gold:       "#C4973A",
-  tint:       "#EEF2FF",
+  tint:       "#FEF3DC",
   text:       "#1E2D5A",
   textMid:    "#4B6CB7",
 };
@@ -265,29 +266,21 @@ export default function Home() {
   return (
     <div
       className="min-h-screen w-full max-w-[480px] mx-auto flex flex-col"
-      style={{ background: P.bg, color: P.text }}
+      style={{ background: "linear-gradient(to bottom, transparent 0px, transparent 60px, #FDF8F0 260px)", color: P.text }}
     >
+
       {/* ── App Bar ──────────────────────────────────────────────────────────── */}
       <div
         className="sticky top-0 z-10 px-4 pt-4 pb-3 flex items-center justify-between"
-        style={{ background: P.bg, borderBottom: `1px solid ${P.cardBorder}` }}
+        style={{ background: "rgba(253,248,240,0.95)", borderBottom: `1px solid ${P.cardBorder}`, backdropFilter: "blur(8px)" }}
       >
         <div className="flex items-center gap-2">
-          <span
-            style={{
-              fontFamily: "'Noto Serif Devanagari', serif",
-              fontSize: 28,
-              color: P.gold,
-              lineHeight: 1,
-            }}
-          >
-            ॐ
-          </span>
+          <span style={{ fontSize: 26, lineHeight: 1 }}>🪷</span>
           <div>
             <div className="text-base font-bold" style={{ color: P.primary }}>
-              {t("Shlokas", "ஸ்லோகாஸ்", "श्लोकाः")}
+              {t("Shlokas", "ஸ்லோகாஸ்", "श्लோकाः")}
             </div>
-            <div className="text-xs opacity-50">{t("Your Sanskrit teacher", "உங்கள் ஆசிரியர்", "आपके शिक्षक")}</div>
+            <div className="text-xs opacity-50">{t("Begin your sadhana", "உங்கள் ஸாதனை தொடங்குங்கள்", "अपनी साधना शुरू करें")}</div>
           </div>
         </div>
 
@@ -422,11 +415,9 @@ export default function Home() {
           <div className="flex flex-col gap-3">
             <div>
               <h2 className="text-lg font-bold" style={{ color: P.primary }}>
-                {t("What would you like to explore?", "என்ன கற்க விரும்புகிறீர்கள்?", "क्या सीखना चाहेंगे?")}
+                {t("What would you like to seek?", "என்ன தேட விரும்புகிறீர்கள்?", "क्या खोजना चाहेंगे?")}
               </h2>
-              <p className="text-sm opacity-50 mt-0.5">
-                {t("Pick a path to get started", "ஒரு பாதையை தேர்வு செய்யுங்கள்", "शुरू करने के लिए एक रास्ता चुनें")}
-              </p>
+
             </div>
 
             {/* BG card */}
@@ -443,10 +434,7 @@ export default function Home() {
                     <p className="font-bold text-base" style={{ color: P.primary }}>
                       {t("Bhagavad Gita", "பகவத் கீதை", "भगवद्गीता")}
                     </p>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: "#DCFCE7", color: "#15803D" }}>
-                      {t("AI Teacher", "AI ஆசிரியர்", "AI शिक्षक")}
-                    </span>
+  
                   </div>
                   <p className="text-sm opacity-55 mt-0.5">
                     {t("700 verses · 18 chapters · Learn with voice", "700 ஸ்லோகங்கள் · குரலில் கற்க", "700 श्लोक · 18 अध्याय · आवाज़ से सीखें")}
@@ -572,6 +560,9 @@ export default function Home() {
             </div>
           </div>
         </div>}
+
+        {/* ── Daily Share Card ─────────────────────────────────────────────────── */}
+        <DailyCard language={progress.language ?? "en-IN"} />
 
         {/* ── Mantra Chanting Player ──────────────────────────────────────────── */}
         <div
@@ -1056,9 +1047,9 @@ export default function Home() {
         {/* Footer note */}
         <p className="text-center text-xs opacity-30 pb-2">
           {t(
-            "AI teacher speaks in English · Sanskrit shlokas chanted authentically",
-            "AI ஆசிரியர் தமிழில் பேசுவார் · Sanskrit ஸ்லோகம் உச்சரிக்கப்படும்",
-            "AI शिक्षक हिन्दी में बोलेंगे · संस्कृत श्लोक का पाठ होगा",
+            "Sanskrit shlokas chanted authentically",
+            "Sanskrit ஸ்லோகம் உச்சரிக்கப்படும்",
+            "संस्कृत श्लोक का पाठ होगा",
           )}
         </p>
       </div>

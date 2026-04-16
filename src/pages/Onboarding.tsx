@@ -49,7 +49,7 @@ export default function Onboarding() {
   return (
     <div
       className="min-h-screen w-full max-w-[480px] mx-auto flex flex-col items-center justify-center px-6"
-      style={{ background: P.bg, color: P.text }}
+      style={{ background: "transparent", color: P.text }}
     >
       <AnimatePresence mode="wait">
 
