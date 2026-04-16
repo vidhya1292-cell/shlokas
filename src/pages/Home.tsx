@@ -168,14 +168,14 @@ export default function Home() {
           <h1 className="text-2xl font-bold" style={{ color: P.primary }}>
             {isTamil ? greeting.ta : isHindi ? greeting.hi : greeting.en}
           </h1>
-          <p className="text-sm opacity-65 mt-1 leading-snug">
+          <p className="text-sm mt-1 leading-snug" style={{ color: P.text }}>
             {isTamil ? welcome.ta : isHindi ? welcome.hi : welcome.en}
           </p>
         </div>
 
         {/* ── Sadhana tiles ── */}
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.primary }}>
             {t("Where do you want to start?", "எங்கிருந்து தொடங்க விரும்புகிறீர்கள்?", "कहाँ से शुरू करना चाहेंगे?")}
           </p>
           <div className="grid grid-cols-3 gap-3">

@@ -52,12 +52,14 @@ async function buildShareCard(params: {
   month: ReturnType<typeof getTamilMonth>;
   festival: ReturnType<typeof getTodayFestival>;
   language: string;
+  krishnaImg: string;
 }): Promise<Blob | null> {
-  const { quote, deity, tithi, month, festival, language } = params;
+  const { quote, deity, tithi, month, festival, language, krishnaImg } = params;
   const isTamil = language === "ta-IN";
   const isHindi = language === "hi-IN";
 
   const W = 540, H = 760;
+  const IMG_H = 300;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -66,55 +68,83 @@ async function buildShareCard(params: {
 
   await document.fonts.ready;
 
-  // ── Background ──
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-  bgGrad.addColorStop(0, "#1E3A8A");
-  bgGrad.addColorStop(0.42, "#2D52C4");
-  bgGrad.addColorStop(0.55, "#FFFFFF");
-  bgGrad.addColorStop(1, "#F5F7FF");
-  ctx.fillStyle = bgGrad;
+  // ── Load Krishna image (same-origin, no CORS issue) ──
+  const loadImage = (src: string): Promise<HTMLImageElement | null> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+
+  // ── White background for bottom section ──
+  ctx.fillStyle = "#F5F7FF";
   ctx.fillRect(0, 0, W, H);
+
+  // ── Draw god image (cover crop) or fallback gradient ──
+  const godImg = await loadImage(krishnaImg);
+  if (godImg) {
+    const srcAspect = godImg.naturalWidth / godImg.naturalHeight;
+    const dstAspect = W / IMG_H;
+    let sx = 0, sy = 0, sw = godImg.naturalWidth, sh = godImg.naturalHeight;
+    if (srcAspect > dstAspect) {
+      sw = sh * dstAspect;
+      sx = (godImg.naturalWidth - sw) / 2;
+    } else {
+      sh = sw / dstAspect;
+    }
+    ctx.drawImage(godImg, sx, sy, sw, sh, 0, 0, W, IMG_H);
+  } else {
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, IMG_H);
+    bgGrad.addColorStop(0, "#1E3A8A");
+    bgGrad.addColorStop(1, "#2D52C4");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, IMG_H);
+  }
+
+  // ── Dark overlay on image for text readability ──
+  const overlayGrad = ctx.createLinearGradient(0, 0, 0, IMG_H);
+  overlayGrad.addColorStop(0, "rgba(10,20,60,0.18)");
+  overlayGrad.addColorStop(0.5, "rgba(10,20,60,0.25)");
+  overlayGrad.addColorStop(1, "rgba(10,20,60,0.88)");
+  ctx.fillStyle = overlayGrad;
+  ctx.fillRect(0, 0, W, IMG_H);
 
   // ── Top: OM + App name ──
   ctx.textAlign = "center";
-  ctx.font = "bold 62px 'Noto Serif Devanagari', serif";
+  ctx.font = "bold 52px 'Noto Serif Devanagari', serif";
   ctx.fillStyle = "#C4973A";
-  ctx.fillText("ॐ", W / 2, 90);
+  ctx.fillText("ॐ", W / 2, 68);
 
-  ctx.font = "bold 22px sans-serif";
+  ctx.font = "bold 18px sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillText("Shlokas.in", W / 2, 128);
+  ctx.fillText("Shlokas.in", W / 2, 100);
 
-  // ── Gold divider ──
-  ctx.strokeStyle = "rgba(196,151,58,0.65)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(80, 148); ctx.lineTo(W - 80, 148);
-  ctx.stroke();
-
-  // ── Panchang info ──
+  // ── Panchang info at bottom of image ──
   const monthLabel = isTamil ? month.nameTA : isHindi ? month.nameHI : month.nameEN;
   const tithiLabel = isTamil ? tithi.nameTA : isHindi ? tithi.nameHI : tithi.nameEN;
-  ctx.font = "bold 20px 'Noto Serif Devanagari', 'Noto Sans Tamil', sans-serif";
-  ctx.fillStyle = "#FFD87A";
-  ctx.fillText(`${monthLabel}  ·  ${tithiLabel}`, W / 2, 178);
-
   const deityName = isTamil ? deity.nameTA : isHindi ? deity.nameHI : deity.name;
   const dayLabel = isTamil ? deity.dayTA : isHindi ? deity.dayHI : deity.dayEN;
-  ctx.font = "16px 'Noto Sans Tamil', sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.72)";
-  ctx.fillText(`${deity.symbol} ${deityName}  ·  ${dayLabel}`, W / 2, 206);
 
-  // ── Festival badge if any ──
+  ctx.textAlign = "left";
+  ctx.font = "bold 20px 'Noto Serif Devanagari', 'Noto Sans Tamil', sans-serif";
+  ctx.fillStyle = "#FFD87A";
+  ctx.fillText(`${monthLabel}  ·  ${tithiLabel}`, 28, IMG_H - 52);
+
+  ctx.font = "15px 'Noto Sans Tamil', sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.fillText(`${deity.symbol} ${deityName}  ·  ${dayLabel}`, 28, IMG_H - 28);
+
   if (festival) {
     const festName = isTamil ? festival.nameTA : isHindi ? festival.nameHI : festival.nameEN;
-    ctx.font = "bold 15px 'Noto Sans Tamil', sans-serif";
+    ctx.textAlign = "right";
+    ctx.font = "bold 13px sans-serif";
     ctx.fillStyle = "#FFD87A";
-    ctx.fillText(`🎉 ${festName}`, W / 2, 232);
+    ctx.fillText(`🎉 ${festName}`, W - 28, IMG_H - 28);
   }
 
   // ── White card area ──
-  const cardY = 260;
+  const cardY = IMG_H + 10;
   ctx.fillStyle = "#FFFFFF";
   ctx.beginPath();
   (ctx as any).roundRect?.(20, cardY, W - 40, H - cardY - 20, 20)
@@ -208,6 +238,7 @@ export default function DailyCard({ language }: Props) {
   const [sharing, setSharing] = useState(false);
   const [done, setDone] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const isTamil = language === "ta-IN";
   const isHindi = language === "hi-IN";
@@ -232,8 +263,8 @@ export default function DailyCard({ language }: Props) {
 
   const handleShare = async () => {
     setSharing(true);
-    const shareParams = { quote, deity, tithi, month, festival, language };
-    const text = buildShareText(shareParams);
+    const shareParams = { quote, deity, tithi, month, festival, language, krishnaImg };
+    const text = buildShareText({ quote, deity, tithi, month, festival, language });
 
     try {
       const blob = await buildShareCard(shareParams);
@@ -400,33 +431,62 @@ export default function DailyCard({ language }: Props) {
         </p>
       </div>
 
-      {/* ── Share button ─────────────────────────────────────────────────────── */}
-      <div style={{ padding: "0 14px 14px" }}>
+      {/* ── Share tile (accordion) ───────────────────────────────────────────── */}
+      <div style={{ borderTop: "1px solid #DBEAFE" }}>
+        {/* Header — always visible, tap to toggle */}
         <button
-          onClick={handleShare}
-          disabled={sharing}
-          className="w-full rounded-xl font-bold transition-all active:scale-[0.97] disabled:opacity-70"
-          style={{
-            height: 46,
-            background: done ? "#16A34A" : "#25D366",
-            color: "white",
-            fontSize: 14,
-            boxShadow: "0 2px 10px rgba(37,211,102,0.30)",
-          }}
+          onClick={() => setShareOpen((o) => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 transition-all active:opacity-75"
+          style={{ background: shareOpen ? "#F0FDF4" : "white" }}
         >
-          {sharing
-            ? t("Generating…", "தயாரிக்கிறோம்…", "बना रहे हैं…")
-            : done
-            ? t("✓ Shared!", "✓ பகிரப்பட்டது!", "✓ शेयर हो गया!")
-            : t("📲 Share on WhatsApp", "📲 WhatsApp-ல் பகிர்", "📲 WhatsApp पर शेयर करें")}
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 18 }}>📲</span>
+            <span className="text-sm font-semibold" style={{ color: "#16A34A" }}>
+              {t("Share on WhatsApp", "WhatsApp-ல் பகிர்", "WhatsApp पर शेयर करें")}
+            </span>
+          </div>
+          <span
+            style={{
+              color: "#16A34A",
+              fontSize: 18,
+              fontWeight: 700,
+              transform: shareOpen ? "rotate(90deg)" : "rotate(0deg)",
+              display: "inline-block",
+              transition: "transform 0.2s",
+            }}
+          >›</span>
         </button>
-        <p className="text-center mt-1.5" style={{ fontSize: 10, color: "#9CA3AF" }}>
-          {t(
-            "Saves image · Opens WhatsApp · Share with family",
-            "படம் சேமிக்கப்படும் · WhatsApp திறக்கும்",
-            "छवि सेव होगी · WhatsApp खुलेगा",
-          )}
-        </p>
+
+        {/* Expanded content */}
+        {shareOpen && (
+          <div style={{ padding: "0 14px 14px", background: "#F0FDF4" }}>
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              className="w-full rounded-xl font-bold transition-all active:scale-[0.97] disabled:opacity-70"
+              style={{
+                height: 46,
+                background: done ? "#16A34A" : "#25D366",
+                color: "white",
+                fontSize: 14,
+                boxShadow: "0 2px 10px rgba(37,211,102,0.30)",
+              }}
+            >
+              {sharing
+                ? t("Generating…", "தயாரிக்கிறோம்…", "बना रहे हैं…")
+                : done
+                ? t("✓ Shared!", "✓ பகிரப்பட்டது!", "✓ शेयर हो गया!")
+                : t("📲 Tap to Share", "📲 பகிர தட்டவும்", "📲 शेयर करें")}
+            </button>
+            <p className="text-center mt-1.5" style={{ fontSize: 10, color: "#6B7280" }}>
+              {t(
+                "Saves image · Opens WhatsApp · Share with family",
+                "படம் சேமிக்கப்படும் · WhatsApp திறக்கும்",
+                "छवि सेव होगी · WhatsApp खुलेगा",
+              )}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
