@@ -244,6 +244,7 @@ export default function DailyCard({ language }: Props) {
   const handleShare = async () => {
     setSharing(true);
     const shareParams = { quote, deity, tithi, month, festival, language, krishnaImg };
+    const text = buildShareText({ quote, deity, tithi, month, festival, language });
 
     try {
       const blob = await buildShareCard(shareParams);
@@ -264,7 +265,7 @@ export default function DailyCard({ language }: Props) {
         }
       }
 
-      // ── Path 2: download image only (user can share manually) ──
+      // ── Path 2: download image + open WhatsApp text ──
       if (blob) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -273,9 +274,10 @@ export default function DailyCard({ language }: Props) {
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
 
     } catch {
-      // ignore
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
     } finally {
       setSharing(false);
       setDone(true);
