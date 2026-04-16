@@ -1,9 +1,6 @@
 /**
- * Read tab — text browser for all scripture content.
- * Three sub-tabs:
- *   Scriptures — Bhagavad Gita + Hanuman Chalisa (text + meaning)
- *   Puranas    — Ramayana Sundara Kanda (lazy-loaded)
- *   Devotional — Deity shlokas + Bhajans
+ * Read tab — scripture browser.
+ * Tiles view → tap a scripture → chapter/sarga list → verses.
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 import { loadProgress } from "../services/storage";
@@ -37,13 +34,51 @@ const P = {
   textMid:    "#4B6CB7",
 };
 
-type Tab = "scriptures" | "puranas" | "devotional";
-type ReadScripture = "bg" | "hanuman_chalisa";
+type ReadView = "bg" | "hanuman_chalisa" | "ramayana_sundara" | "devotional" | null;
 
 const FALLBACK_BG_SECTIONS: SectionEntry[] = bgChapters.map((ch) => ({
   id: ch.number, textId: "bg", number: ch.number,
   name: ch.name, slokaCount: ch.verseCount,
 }));
+
+const TILES = [
+  {
+    id: "bg" as ReadView,
+    icon: "📖",
+    en: "Bhagavad Gita",      ta: "பகவத் கீதை",       hi: "भगवद्गीता",
+    subEn: "700 verses · 18 chapters",
+    subTa: "700 ஸ்லோகங்கள் · 18 அத்தியாயங்கள்",
+    subHi: "700 श्लोक · 18 अध्याय",
+    bg: "#EEF2FF",
+  },
+  {
+    id: "hanuman_chalisa" as ReadView,
+    icon: "🙏",
+    en: "Hanuman Chalisa",    ta: "ஹனுமான் சாலீசா",   hi: "हनुमान चालीसा",
+    subEn: "43 verses · Tulsidas",
+    subTa: "43 வரிகள் · துளசிதாஸ்",
+    subHi: "43 पद · तुलसीदास",
+    bg: "#FFF7ED",
+  },
+  {
+    id: "ramayana_sundara" as ReadView,
+    icon: "🐒",
+    en: "Sundara Kanda",      ta: "சுந்தர காண்டம்",    hi: "सुंदर काण्ड",
+    subEn: "68 sargas · 2772 shlokas · Valmiki Ramayana",
+    subTa: "68 சர்கங்கள் · 2772 ஸ்லோகங்கள் · வால்மீகி ராமாயணம்",
+    subHi: "68 सर्ग · 2772 श्लोक · वाल्मीकि रामायण",
+    bg: "#F0FDF4",
+  },
+  {
+    id: "devotional" as ReadView,
+    icon: "🪔",
+    en: "Devotional",         ta: "பக்தி",              hi: "भक्ति",
+    subEn: "Deity shlokas · Bhajans",
+    subTa: "தெய்வ ஸ்லோகங்கள் · பஜன்கள்",
+    subHi: "देवता श्लोक · भजन",
+    bg: "#FFF1F2",
+  },
+];
 
 export default function Read() {
   const progress = loadProgress();
@@ -52,11 +87,10 @@ export default function Read() {
   const t = (en: string, ta: string, hi: string) => (isTamil ? ta : isHindi ? hi : en);
   const voice = progress.voice || DEFAULT_VOICE;
 
-  const [tab, setTab] = useState<Tab>("scriptures");
+  const [view, setView] = useState<ReadView>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // ── Scriptures tab state ──────────────────────────────────────────────────
-  const [readScripture, setReadScripture] = useState<ReadScripture>("bg");
+  // ── BG / HC drill-down state ──────────────────────────────────────────────
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [bgSections, setBgSections] = useState<SectionEntry[]>([]);
   const [loadingBgSections, setLoadingBgSections] = useState(true);
@@ -76,42 +110,28 @@ export default function Read() {
     setChapterVerses([]);
     setLoadingChapter(true);
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-
-    if (readScripture === "bg") {
+    if (view === "bg") {
       const verses = await getBGVerses(n);
-      if (verses.length > 0) {
-        setChapterVerses(verses);
-      } else {
-        setChapterVerses(bgVerses.filter((v) => !v.isPlaceholder && v.chapter === n));
-      }
+      setChapterVerses(verses.length > 0 ? verses : bgVerses.filter((v) => !v.isPlaceholder && v.chapter === n));
     } else {
-      // Hanuman Chalisa — all data is local
       setChapterVerses(hcVerses.filter((v) => v.chapter === n));
     }
     setLoadingChapter(false);
   };
 
-  const switchScripture = (s: ReadScripture) => {
-    setReadScripture(s);
-    setSelectedChapter(null);
-    setChapterVerses([]);
-    contentRef.current?.scrollTo({ top: 0 });
-  };
-
-  // ── Puranas tab state ─────────────────────────────────────────────────────
+  // ── Sundara Kanda state ───────────────────────────────────────────────────
   const sk = SCRIPTURES["ramayana_sundara"];
   const { data: skData, loading: skLoading, error: skError } = useScripture(sk.lazyJsonPath ?? null);
   const [selectedSarga, setSelectedSarga] = useState<number | null>(null);
-
   const sargaVerses = selectedSarga !== null && skData
     ? skData.verses.filter((v) => v.chapter === selectedSarga)
     : [];
 
-  // ── Devotional tab state ──────────────────────────────────────────────────
-  const [selectedDeity, setSelectedDeity] = useState<string>(DEITY_COLLECTIONS[0].id);
+  // ── Devotional state ──────────────────────────────────────────────────────
+  const [expandedDeity, setExpandedDeity] = useState<string | null>(null);
   const [expandedBhajan, setExpandedBhajan] = useState<string | null>(null);
 
-  // ── Audio playback ────────────────────────────────────────────────────────
+  // ── Audio ─────────────────────────────────────────────────────────────────
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   const playText = useCallback(async (id: string, text: string) => {
@@ -127,86 +147,140 @@ export default function Read() {
     }
   }, [playingId, voice]);
 
-  const switchTab = (newTab: Tab) => {
-    setTab(newTab);
+  // ── Navigation helpers ────────────────────────────────────────────────────
+  const goToTiles = () => {
+    setView(null);
     setSelectedChapter(null);
-    setSelectedSarga(null);
     setChapterVerses([]);
+    setSelectedSarga(null);
     contentRef.current?.scrollTo({ top: 0 });
   };
 
-  const currentDeity = DEITY_COLLECTIONS.find((d) => d.id === selectedDeity)!;
   const bgChapterName = (n: number) => displayBgSections.find((s) => s.number === n)?.name ?? "";
   const hcChapterName = (n: number) => hcChapters.find((c) => c.number === n)?.name ?? "";
+
+  const viewTitle = view === "bg"
+    ? t("Bhagavad Gita", "பகவத் கீதை", "भगवद्गीता")
+    : view === "hanuman_chalisa"
+    ? t("Hanuman Chalisa", "ஹனுமான் சாலீசா", "हनुमान चालीसा")
+    : view === "ramayana_sundara"
+    ? t("Sundara Kanda", "சுந்தர காண்டம்", "सुंदर काण्ड")
+    : t("Devotional", "பக்தி", "भक्ति");
 
   return (
     <div
       className="min-h-screen w-full max-w-[480px] mx-auto flex flex-col"
       style={{ background: "linear-gradient(to bottom, transparent 0px, transparent 60px, #FDF8F0 260px)", color: P.text }}
     >
-      {/* ── Header + tabs ── */}
+      {/* ── Header ── */}
       <div
-        className="sticky top-0 z-20 px-4 pt-4 pb-0"
+        className="sticky top-0 z-20 px-4 pt-4 pb-3 flex items-center gap-3"
         style={{ background: "rgba(253,248,240,0.92)", backdropFilter: "blur(8px)", borderBottom: `1px solid ${P.cardBorder}` }}
       >
-        <h1 className="text-lg font-bold mb-1" style={{ color: P.primary }}>
-          {t("Read", "படி", "पढ़ें")}
-        </h1>
-        <div className="flex gap-1 pb-0">
-          {(
-            [
-              { id: "scriptures", en: "📖 Scriptures", ta: "📖 வேதங்கள்",   hi: "📖 शास्त्र"  },
-              { id: "puranas",    en: "🐒 Puranas",    ta: "🐒 புராணங்கள்",  hi: "🐒 पुराण"    },
-              { id: "devotional", en: "🪔 Devotional", ta: "🪔 பக்தி",        hi: "🪔 भक्ति"    },
-            ] as const
-          ).map((tabDef) => (
-            <button
-              key={tabDef.id}
-              onClick={() => switchTab(tabDef.id)}
-              className="flex-1 py-2.5 text-xs font-semibold transition-all rounded-none"
-              style={{
-                color: tab === tabDef.id ? P.primary : P.textMid,
-                borderBottom: `3px solid ${tab === tabDef.id ? P.gold : "transparent"}`,
-                background: "transparent",
-                opacity: tab === tabDef.id ? 1 : 0.6,
-              }}
-            >
-              {isTamil ? tabDef.ta : isHindi ? tabDef.hi : tabDef.en}
-            </button>
-          ))}
+        {view !== null && (
+          <button
+            onClick={goToTiles}
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-lg font-bold transition-all active:scale-90"
+            style={{ background: P.tint, color: P.primary, border: `1.5px solid ${P.cardBorder}` }}
+          >‹</button>
+        )}
+        <div>
+          <h1 className="text-lg font-bold leading-tight" style={{ color: P.primary }}>
+            {view === null ? t("Read", "படி", "पढ़ें") : viewTitle}
+          </h1>
+          {view === null && (
+            <p className="text-xs opacity-50">
+              {t("Browse · Explore · Reflect", "படி · ஆராய் · சிந்தி", "पढ़ें · खोजें · चिंतन करें")}
+            </p>
+          )}
         </div>
       </div>
 
       {/* ── Scrollable content ── */}
       <div ref={contentRef} className="flex-1 overflow-y-auto pb-24">
 
-        {/* ════════════ SCRIPTURES TAB ════════════════════════════════════════ */}
-        {tab === "scriptures" && (
-          <div>
-            {/* Scripture selector pills */}
-            <div className="px-4 pt-4 pb-3 flex gap-2">
-              {(["bg", "hanuman_chalisa"] as ReadScripture[]).map((sId) => {
-                const s = SCRIPTURES[sId];
-                const isActive = readScripture === sId;
-                return (
+        {/* ════════════ TILES VIEW ════════════════════════════════════════════ */}
+        {view === null && (
+          <div className="px-4 pt-5 pb-8 flex flex-col gap-6">
+
+            {/* ── Scriptures ── */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
+                📖 {t("Scriptures", "வேதங்கள்", "शास्त्र")}
+              </p>
+              <div className="flex gap-3">
+                {TILES.slice(0, 2).map((tile) => (
                   <button
-                    key={sId}
-                    onClick={() => switchScripture(sId)}
-                    className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition-all active:scale-95"
-                    style={{
-                      background: isActive ? P.primary : "white",
-                      color: isActive ? "white" : P.primary,
-                      border: `1.5px solid ${isActive ? P.primary : P.cardBorder}`,
-                    }}
+                    key={tile.id as string}
+                    onClick={() => { setView(tile.id); contentRef.current?.scrollTo({ top: 0 }); }}
+                    className="flex-1 rounded-2xl p-4 flex flex-col items-center text-center gap-2 transition-all active:scale-[0.97]"
+                    style={{ background: tile.bg, border: `1.5px solid ${P.cardBorder}` }}
                   >
-                    <span>{s.icon}</span>
-                    <span>{isTamil ? s.titleTA : isHindi ? s.titleHI : s.titleEN}</span>
+                    <span style={{ fontSize: 34 }}>{tile.icon}</span>
+                    <p className="font-bold text-sm leading-tight" style={{ color: P.primary }}>
+                      {isTamil ? tile.ta : isHindi ? tile.hi : tile.en}
+                    </p>
+                    <p className="text-xs opacity-50 leading-snug">
+                      {isTamil ? tile.subTa : isHindi ? tile.subHi : tile.subEn}
+                    </p>
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
 
-            {/* Back button when inside a chapter */}
+            {/* ── Puranas ── */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
+                🐒 {t("Puranas", "புராணங்கள்", "पुराण")}
+              </p>
+              <button
+                onClick={() => { setView("ramayana_sundara"); contentRef.current?.scrollTo({ top: 0 }); }}
+                className="w-full rounded-2xl px-5 py-4 flex items-center gap-4 text-left transition-all active:scale-[0.98]"
+                style={{ background: TILES[2].bg, border: `1.5px solid ${P.cardBorder}` }}
+              >
+                <span style={{ fontSize: 34 }}>{TILES[2].icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-base" style={{ color: P.primary }}>
+                    {isTamil ? TILES[2].ta : isHindi ? TILES[2].hi : TILES[2].en}
+                  </p>
+                  <p className="text-xs opacity-50 mt-0.5 leading-snug">
+                    {isTamil ? TILES[2].subTa : isHindi ? TILES[2].subHi : TILES[2].subEn}
+                  </p>
+                </div>
+                <span style={{ color: P.primary, fontSize: 20, opacity: 0.4 }}>›</span>
+              </button>
+            </div>
+
+            {/* ── Other Shlokas / Bhajans ── */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
+                🪔 {t("Other Shlokas / Bhajans", "பக்தி ஸ்லோகங்கள் / பஜன்கள்", "भक्ति श्लोक / भजन")}
+              </p>
+              <button
+                onClick={() => { setView("devotional"); contentRef.current?.scrollTo({ top: 0 }); }}
+                className="w-full rounded-2xl px-5 py-4 flex items-center gap-4 text-left transition-all active:scale-[0.98]"
+                style={{ background: TILES[3].bg, border: `1.5px solid ${P.cardBorder}` }}
+              >
+                <span style={{ fontSize: 34 }}>{TILES[3].icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-base" style={{ color: P.primary }}>
+                    {isTamil ? TILES[3].ta : isHindi ? TILES[3].hi : TILES[3].en}
+                  </p>
+                  <p className="text-xs opacity-50 mt-0.5 leading-snug">
+                    {isTamil ? TILES[3].subTa : isHindi ? TILES[3].subHi : TILES[3].subEn}
+                  </p>
+                </div>
+                <span style={{ color: P.primary, fontSize: 20, opacity: 0.4 }}>›</span>
+              </button>
+            </div>
+
+          </div>
+        )}
+
+        {/* ════════════ BG / HC VIEW ══════════════════════════════════════════ */}
+        {(view === "bg" || view === "hanuman_chalisa") && (
+          <div>
+            {/* Back button inside a chapter */}
             {selectedChapter !== null && (
               <div
                 className="sticky top-0 z-10 px-4 py-3 flex items-center gap-3"
@@ -222,7 +296,7 @@ export default function Read() {
                     {t(`Chapter ${selectedChapter}`, `அத்தியாயம் ${selectedChapter}`, `अध्याय ${selectedChapter}`)}
                   </p>
                   <p className="font-bold text-sm truncate" style={{ color: P.primary }}>
-                    {readScripture === "bg" ? bgChapterName(selectedChapter) : hcChapterName(selectedChapter)}
+                    {view === "bg" ? bgChapterName(selectedChapter) : hcChapterName(selectedChapter)}
                   </p>
                 </div>
               </div>
@@ -230,8 +304,8 @@ export default function Read() {
 
             {/* Chapter list */}
             {selectedChapter === null && (
-              <div className="px-4 pt-2 pb-6 flex flex-col gap-2">
-                {readScripture === "bg" ? (
+              <div className="px-4 pt-4 pb-6 flex flex-col gap-2">
+                {view === "bg" ? (
                   <>
                     {loadingBgSections && Array.from({ length: 6 }).map((_, i) => (
                       <div key={i} className="w-full h-14 rounded-2xl animate-pulse" style={{ background: "#D4DEFF" }} />
@@ -250,7 +324,7 @@ export default function Read() {
               </div>
             )}
 
-            {/* Verse list for selected chapter */}
+            {/* Verses for selected chapter */}
             {selectedChapter !== null && (
               <div className="flex flex-col gap-4 px-4 py-4">
                 {loadingChapter && Array.from({ length: 3 }).map((_, i) => (
@@ -259,9 +333,7 @@ export default function Read() {
                 {!loadingChapter && chapterVerses.map((v) => (
                   <VerseCard
                     key={`${v.chapter}:${v.verse}`}
-                    verse={v}
-                    isTamil={isTamil}
-                    isHindi={isHindi}
+                    verse={v} isTamil={isTamil} isHindi={isHindi}
                     playingId={playingId}
                     onPlay={(id, text) => { unlockAudioContext(); unlockChantingAudio(); playText(id, text); }}
                   />
@@ -279,10 +351,9 @@ export default function Read() {
           </div>
         )}
 
-        {/* ════════════ PURANAS TAB ════════════════════════════════════════════ */}
-        {tab === "puranas" && (
+        {/* ════════════ SUNDARA KANDA VIEW ════════════════════════════════════ */}
+        {view === "ramayana_sundara" && (
           <div>
-            {/* Loading */}
             {skLoading && (
               <div className="px-4 pt-6 flex flex-col gap-2">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -290,30 +361,17 @@ export default function Read() {
                 ))}
               </div>
             )}
-
-            {/* Error */}
             {skError && !skLoading && (
               <div className="px-4 pt-8 text-center">
                 <p className="text-4xl mb-3">⚠️</p>
-                <p className="font-semibold" style={{ color: P.primary }}>{t("Could not load Sundara Kanda", "சுந்தர காண்டம் ஏற்றல் தோல்வி", "सुंदर काण्ड लोड नहीं हुआ")}</p>
+                <p className="font-semibold" style={{ color: P.primary }}>
+                  {t("Could not load Sundara Kanda", "சுந்தர காண்டம் ஏற்றல் தோல்வி", "सुंदर काण्ड लोड नहीं हुआ")}
+                </p>
                 <p className="text-xs opacity-50 mt-1">{skError}</p>
               </div>
             )}
-
-            {/* Data loaded */}
             {skData && !skLoading && (
               <>
-                {/* Header */}
-                <div className="px-4 pt-4 pb-3 flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-2xl" style={{ background: P.tint }}>🐒</div>
-                  <div>
-                    <p className="font-bold text-base" style={{ color: P.primary }}>
-                      {isTamil ? sk.titleTA : isHindi ? sk.titleHI : sk.titleEN}
-                    </p>
-                    <p className="text-xs opacity-50">{isTamil ? sk.subtitleTA : isHindi ? sk.subtitleHI : sk.subtitleEN}</p>
-                  </div>
-                </div>
-
                 {/* Back button inside a sarga */}
                 {selectedSarga !== null && (
                   <div
@@ -338,15 +396,11 @@ export default function Read() {
 
                 {/* Sarga list */}
                 {selectedSarga === null && (
-                  <div className="px-4 pt-2 pb-6 flex flex-col gap-2">
+                  <div className="px-4 pt-4 pb-6 flex flex-col gap-2">
                     {skData.chapters.map((ch) => (
                       <ChapterRow
-                        key={ch.number}
-                        number={ch.number}
-                        name={ch.name}
-                        verseCount={ch.verseCount}
-                        isTamil={isTamil}
-                        isHindi={isHindi}
+                        key={ch.number} number={ch.number} name={ch.name} verseCount={ch.verseCount}
+                        isTamil={isTamil} isHindi={isHindi}
                         labelPrefix={t("Sarga", "சர்கம்", "सर्ग")}
                         onClick={() => { setSelectedSarga(ch.number); contentRef.current?.scrollTo({ top: 0 }); }}
                       />
@@ -360,9 +414,7 @@ export default function Read() {
                     {sargaVerses.map((v) => (
                       <VerseCard
                         key={`${v.chapter}:${v.verse}`}
-                        verse={v}
-                        isTamil={isTamil}
-                        isHindi={isHindi}
+                        verse={v} isTamil={isTamil} isHindi={isHindi}
                         playingId={playingId}
                         onPlay={(id, text) => { unlockAudioContext(); unlockChantingAudio(); playText(id, text); }}
                       />
@@ -379,119 +431,132 @@ export default function Read() {
           </div>
         )}
 
-        {/* ════════════ DEVOTIONAL TAB ═════════════════════════════════════════ */}
-        {tab === "devotional" && (
-          <div>
+        {/* ════════════ DEVOTIONAL VIEW ═══════════════════════════════════════ */}
+        {view === "devotional" && (
+          <div className="px-4 pt-5 pb-8 flex flex-col gap-6">
+
             {/* ── Deity Shlokas ── */}
             <div>
-              <p className="px-4 pt-4 pb-2 text-xs font-bold uppercase tracking-widest" style={{ color: P.gold }}>
-                {t("Deity Shlokas", "தெய்வ ஸ்லோகங்கள்", "देवता श्लोक")}
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
+                🕉️ {t("Deity Shlokas", "தெய்வ ஸ்லோகங்கள்", "देवता श्लोक")}
               </p>
+              <div className="flex flex-col gap-2">
+                {DEITY_COLLECTIONS.map((dc) => {
+                  const isOpen = expandedDeity === dc.id;
+                  return (
+                    <div key={dc.id} className="rounded-2xl overflow-hidden"
+                      style={{ border: `1.5px solid ${isOpen ? dc.borderColor : P.cardBorder}` }}>
 
-              {/* Deity selector */}
-              <div className="px-4 pb-3 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-                {DEITY_COLLECTIONS.map((dc) => (
-                  <button
-                    key={dc.id}
-                    onClick={() => setSelectedDeity(dc.id)}
-                    className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-semibold transition-all active:scale-95 flex items-center gap-1.5"
-                    style={{
-                      background: selectedDeity === dc.id ? P.primary : "white",
-                      color: selectedDeity === dc.id ? "white" : P.primary,
-                      border: `1.5px solid ${selectedDeity === dc.id ? P.primary : P.cardBorder}`,
-                    }}
-                  >
-                    <span>{dc.icon}</span>
-                    <span>{isTamil ? dc.deityTA : isHindi ? dc.deityHI : dc.deity}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Deity shlokas */}
-              <div className="flex flex-col gap-4 px-4 pb-4">
-                {currentDeity.shlokas.map((sh, idx) => (
-                  <div key={sh.id} className="rounded-2xl overflow-hidden"
-                    style={{ background: "white", border: `1.5px solid ${currentDeity.borderColor}` }}>
-                    <div className="px-5 py-3 flex items-center gap-3"
-                      style={{ background: currentDeity.bgColor, borderBottom: `1px solid ${currentDeity.borderColor}` }}>
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
-                        style={{ background: "white", color: P.primary }}>{idx + 1}</div>
-                      <p className="font-bold text-sm flex-1" style={{ color: P.primary }}>
-                        {isTamil && sh.nameTA ? sh.nameTA : isHindi && sh.nameHI ? sh.nameHI : sh.name}
-                      </p>
+                      {/* Deity header tile — tap to open/close */}
                       <button
-                        onClick={() => { unlockAudioContext(); unlockChantingAudio(); playText(`deity-${sh.id}`, sh.sanskrit); }}
-                        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 text-xs"
-                        style={{ background: playingId === `deity-${sh.id}` ? P.primary : "white", color: playingId === `deity-${sh.id}` ? "white" : P.primary, border: `1.5px solid ${currentDeity.borderColor}` }}
-                      >{playingId === `deity-${sh.id}` ? "⏸" : "▶"}</button>
+                        onClick={() => setExpandedDeity(isOpen ? null : dc.id)}
+                        className="w-full px-4 py-3.5 flex items-center gap-3 text-left transition-all active:scale-[0.98]"
+                        style={{ background: isOpen ? dc.bgColor : P.card }}
+                      >
+                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-2xl"
+                          style={{ background: isOpen ? "white" : dc.bgColor }}>
+                          {dc.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm" style={{ color: P.primary }}>
+                            {isTamil ? dc.deityTA : isHindi ? dc.deityHI : dc.deity}
+                          </p>
+                          <p className="text-xs opacity-45 mt-0.5">
+                            {dc.shlokas.length} {t("shlokas", "ஸ்லோகங்கள்", "श्लोक")}
+                          </p>
+                        </div>
+                        <span
+                          className="text-lg font-bold transition-transform shrink-0"
+                          style={{ color: P.primary, opacity: 0.4, transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }}
+                        >›</span>
+                      </button>
+
+                      {/* Expanded shlokas */}
+                      {isOpen && (
+                        <div style={{ borderTop: `1px solid ${dc.borderColor}` }}>
+                          {dc.shlokas.map((sh, idx) => (
+                            <div key={sh.id}>
+                              {idx > 0 && <div style={{ height: 1, background: dc.borderColor }} />}
+                              <div className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="font-semibold text-sm" style={{ color: P.primary }}>
+                                    {isTamil && sh.nameTA ? sh.nameTA : isHindi && sh.nameHI ? sh.nameHI : sh.name}
+                                  </p>
+                                  <button
+                                    onClick={() => { unlockAudioContext(); unlockChantingAudio(); playText(`deity-${sh.id}`, sh.sanskrit); }}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 text-xs ml-2"
+                                    style={{ background: playingId === `deity-${sh.id}` ? P.primary : "white", color: playingId === `deity-${sh.id}` ? "white" : P.primary, border: `1.5px solid ${dc.borderColor}` }}
+                                  >{playingId === `deity-${sh.id}` ? "⏸" : "▶"}</button>
+                                </div>
+                                <p className="text-center leading-relaxed mb-2"
+                                  style={{ fontFamily: "'Noto Serif Devanagari', serif", fontSize: 18, color: P.text, lineHeight: 2, whiteSpace: "pre-line" }}>
+                                  {sh.sanskrit}
+                                </p>
+                                {sh.transliteration && (
+                                  <p className="text-center text-sm italic opacity-40 mb-3" style={{ fontFamily: "serif", whiteSpace: "pre-line" }}>
+                                    {sh.transliteration}
+                                  </p>
+                                )}
+                                <div className="rounded-xl p-3" style={{ background: dc.bgColor }}>
+                                  <p className="text-xs font-semibold uppercase tracking-wider opacity-50 mb-1">{t("Meaning", "பொருள்", "अर्थ")}</p>
+                                  <p className="text-sm leading-relaxed" style={{ color: P.text }}>
+                                    {isTamil && sh.meaningTA ? sh.meaningTA : isHindi && sh.meaningHI ? sh.meaningHI : sh.meaningEN}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="p-5">
-                      <p className="text-center leading-relaxed mb-3"
-                        style={{ fontFamily: "'Noto Serif Devanagari', serif", fontSize: 20, color: P.text, lineHeight: 2, whiteSpace: "pre-line" }}>
-                        {sh.sanskrit}
-                      </p>
-                      <p className="text-center text-sm italic opacity-45 mb-4" style={{ fontFamily: "serif", whiteSpace: "pre-line" }}>
-                        {sh.transliteration}
-                      </p>
-                      <div className="mb-4" style={{ height: 1, background: currentDeity.borderColor }} />
-                      <div className="rounded-xl p-4" style={{ background: currentDeity.bgColor }}>
-                        <p className="text-xs font-semibold uppercase tracking-wider opacity-50 mb-2">{t("Meaning", "பொருள்", "अर्थ")}</p>
-                        <p className="text-sm leading-relaxed" style={{ color: P.text }}>
-                          {isTamil && sh.meaningTA ? sh.meaningTA : isHindi && sh.meaningHI ? sh.meaningHI : sh.meaningEN}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* ── Bhajans ── */}
-            <div style={{ borderTop: `1px solid ${P.cardBorder}` }}>
-              <p className="px-4 pt-4 pb-3 text-xs font-bold uppercase tracking-widest" style={{ color: P.gold }}>
-                {t("Bhajans", "பஜன்கள்", "भजन")}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: P.gold }}>
+                🎵 {t("Bhajans", "பஜன்கள்", "भजन")}
               </p>
-              <div className="flex flex-col gap-3 px-4 pb-8">
+              <div className="flex flex-col gap-2">
                 {BHAJANS.map((bh) => {
                   const isOpen = expandedBhajan === bh.id;
                   return (
                     <div key={bh.id} className="rounded-2xl overflow-hidden"
-                      style={{ background: "white", border: "1.5px solid #BBF7D0" }}>
-                      <div className="p-4 flex items-center gap-4 cursor-pointer"
-                        onClick={() => setExpandedBhajan(isOpen ? null : bh.id)}>
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl"
-                          style={{ background: "#F0FDF4", color: "#15803D" }}>🎵</div>
+                      style={{ border: `1.5px solid ${isOpen ? "#BBF7D0" : P.cardBorder}` }}>
+
+                      {/* Bhajan header tile */}
+                      <button
+                        className="w-full p-4 flex items-center gap-3 text-left transition-all active:scale-[0.98]"
+                        style={{ background: isOpen ? "#F0FDF4" : P.card }}
+                        onClick={() => setExpandedBhajan(isOpen ? null : bh.id)}
+                      >
+                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-xl"
+                          style={{ background: isOpen ? "white" : "#F0FDF4", color: "#15803D" }}>🎵</div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm" style={{ color: P.text }}>
                             {isTamil ? bh.nameTA : isHindi ? bh.nameHI : bh.name}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-xs opacity-50">{isTamil ? bh.deityTA : bh.deity}</span>
                             <span className="text-xs opacity-30">·</span>
                             <span className="text-xs opacity-50">{bh.language}</span>
                           </div>
                         </div>
-                        <span className="text-xl transition-transform shrink-0"
-                          style={{ color: "#15803D", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }}>›</span>
-                      </div>
+                        <span
+                          className="text-lg font-bold transition-transform shrink-0"
+                          style={{ color: "#15803D", opacity: 0.6, transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", display: "inline-block" }}
+                        >›</span>
+                      </button>
 
-                      {!isOpen && (
-                        <div className="px-4 pb-3">
-                          <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                            style={{ background: "#F0FDF4", color: "#15803D" }}>{isTamil ? bh.tagTA : bh.tagEN}</span>
-                        </div>
-                      )}
-
+                      {/* Expanded bhajan content */}
                       {isOpen && (
                         <div style={{ borderTop: "1px solid #BBF7D0" }}>
-                          <div className="px-4 py-3">
-                            <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                              style={{ background: "#F0FDF4", color: "#15803D" }}>{isTamil ? bh.tagTA : bh.tagEN}</span>
-                          </div>
                           {bh.verses.map((v, vi) => (
                             <div key={vi}>
-                              {vi > 0 && <div className="mx-4 mb-4" style={{ height: 1, background: "#BBF7D0" }} />}
-                              <div className="px-4 pb-4">
+                              {vi > 0 && <div className="mx-4" style={{ height: 1, background: "#BBF7D0" }} />}
+                              <div className="px-4 py-4">
                                 <div className="flex items-center justify-between mb-3">
                                   {bh.verses.length > 1 ? (
                                     <p className="text-xs font-semibold uppercase tracking-widest opacity-40">
@@ -510,11 +575,11 @@ export default function Read() {
                                   {v.lines}
                                 </p>
                                 {v.transliteration && (
-                                  <p className="text-center text-sm italic opacity-40 mb-4"
+                                  <p className="text-center text-sm italic opacity-40 mb-3"
                                     style={{ fontFamily: "serif", whiteSpace: "pre-line" }}>{v.transliteration}</p>
                                 )}
-                                <div className="rounded-xl p-4" style={{ background: "#F0FDF4" }}>
-                                  <p className="text-xs font-semibold uppercase tracking-wider opacity-50 mb-2">{t("Meaning", "பொருள்", "अर्थ")}</p>
+                                <div className="rounded-xl p-3" style={{ background: "#F0FDF4" }}>
+                                  <p className="text-xs font-semibold uppercase tracking-wider opacity-50 mb-1">{t("Meaning", "பொருள்", "अர्थ")}</p>
                                   <p className="text-sm leading-relaxed" style={{ color: P.text }}>
                                     {isTamil && v.meaningTA ? v.meaningTA : isHindi && v.meaningHI ? v.meaningHI : v.meaningEN}
                                   </p>
@@ -529,8 +594,10 @@ export default function Read() {
                 })}
               </div>
             </div>
+
           </div>
         )}
+
       </div>
     </div>
   );
@@ -585,7 +652,6 @@ function VerseCard({
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: `1.5px solid ${P.cardBorder}` }}>
-      {/* Header strip */}
       <div className="px-5 py-3 flex items-center justify-between"
         style={{ background: P.tint, borderBottom: `1px solid ${P.cardBorder}` }}>
         <span className="text-xs font-bold uppercase tracking-widest" style={{ color: P.primary }}>
@@ -612,7 +678,6 @@ function VerseCard({
       </div>
 
       <div className="p-5">
-        {/* Script rendering */}
         {isTamil ? (
           <>
             <p className="text-center mb-3"
@@ -639,7 +704,6 @@ function VerseCard({
           </>
         )}
 
-        {/* Word by word */}
         {showWords && verse.wordByWord && (
           <div className="mb-4 flex flex-wrap gap-2">
             {verse.wordByWord.map((w, i) => (
