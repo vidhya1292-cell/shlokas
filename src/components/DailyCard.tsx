@@ -233,34 +233,46 @@ export default function DailyCard({ language }: Props) {
   const handleShare = async () => {
     setSharing(true);
     const shareParams = { quote, deity, tithi, month, festival, language };
+    const text = buildShareText(shareParams);
+
     try {
-      // Try to generate canvas image and share as file
-      if (typeof navigator.share === "function" && navigator.canShare) {
-        const blob = await buildShareCard(shareParams);
-        if (blob) {
-          const file = new File([blob], "shlokas-daily.png", { type: "image/png" });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              text: buildShareText(shareParams),
-            });
-            setDone(true);
-            setTimeout(() => setDone(false), 3000);
-            return;
-          }
+      const blob = await buildShareCard(shareParams);
+
+      // ── Path 1: native file share (iOS Safari, Android Chrome) ──
+      if (blob && typeof navigator.share === "function") {
+        const file = new File([blob], "shlokas-daily.png", { type: "image/png" });
+        try {
+          await navigator.share({ files: [file] });
+          // User completed the native share sheet
+          setDone(true);
+          setTimeout(() => setDone(false), 3000);
+          return;
+        } catch (e: any) {
+          // AbortError = user cancelled → don't fall through to WhatsApp
+          if (e?.name === "AbortError") return;
+          // Other error (unsupported) → fall through
         }
       }
+
+      // ── Path 2: download image + open WhatsApp text ──
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "shlokas-daily.png";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+
     } catch {
-      // User cancelled or share failed — fall through to text
+      // Canvas generation failed — text only
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
     } finally {
       setSharing(false);
+      setDone(true);
+      setTimeout(() => setDone(false), 3000);
     }
-    // Fallback: WhatsApp text link
-    const text = buildShareText(shareParams);
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-    setDone(true);
-    setTimeout(() => setDone(false), 3000);
-    setSharing(false);
   };
 
   return (
@@ -410,9 +422,9 @@ export default function DailyCard({ language }: Props) {
         </button>
         <p className="text-center mt-1.5" style={{ fontSize: 10, color: "#9CA3AF" }}>
           {t(
-            "New message every day · Share with family",
-            "தினமும் புதிய செய்தி · குடும்பத்துடன் பகிரவும்",
-            "हर दिन नया संदेश · परिवार के साथ साझा करें",
+            "Saves image · Opens WhatsApp · Share with family",
+            "படம் சேமிக்கப்படும் · WhatsApp திறக்கும்",
+            "छवि सेव होगी · WhatsApp खुलेगा",
           )}
         </p>
       </div>
