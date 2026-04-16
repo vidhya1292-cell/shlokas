@@ -63,10 +63,10 @@ const TILES = [
   {
     id: "ramayana_sundara" as ReadView,
     icon: "🐒",
-    en: "Sundara Kanda",      ta: "சுந்தர காண்டம்",    hi: "सुंदर काण्ड",
-    subEn: "68 sargas · 2772 shlokas · Valmiki Ramayana",
-    subTa: "68 சர்கங்கள் · 2772 ஸ்லோகங்கள் · வால்மீகி ராமாயணம்",
-    subHi: "68 सर्ग · 2772 श्लोक · वाल्मीकि रामायण",
+    en: "Ramayana",           ta: "ராமாயணம்",           hi: "रामायण",
+    subEn: "Sundara Kanda · 68 sargas · Valmiki",
+    subTa: "சுந்தர காண்டம் · 68 சர்கங்கள் · வால்மீகி",
+    subHi: "सुंदर काण्ड · 68 सर्ग · वाल्मीकि",
     bg: "#F0FDF4",
   },
   {
@@ -164,7 +164,7 @@ export default function Read() {
     : view === "hanuman_chalisa"
     ? t("Hanuman Chalisa", "ஹனுமான் சாலீசா", "हनुमान चालीसा")
     : view === "ramayana_sundara"
-    ? t("Sundara Kanda", "சுந்தர காண்டம்", "सुंदर काण्ड")
+    ? t("Ramayana", "ராமாயணம்", "रामायण")
     : t("Stotras & Bhajans", "ஸ்தோத்திரங்கள் & பஜன்கள்", "स्तोत्र & भजन");
 
   return (
