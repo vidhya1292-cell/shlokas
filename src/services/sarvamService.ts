@@ -1,6 +1,7 @@
 import Sanscript from "@indic-transliteration/sanscript";
 import { setSharedAudioContext } from "./sharedAudioContext";
 import { stopChantingAudio } from "./chantingService";
+import { elevenLabsTTS, isElevenLabsAvailable } from "./elevenLabsService";
 
 const API_KEY = import.meta.env.VITE_SARVAM_API_KEY as string;
 
@@ -57,6 +58,14 @@ export const VOICE_OPTIONS: VoiceOption[] = [
 export const DEFAULT_VOICE = "kabir";
 export const DEFAULT_KIDS_VOICE = "priya";
 
+// Maps app voice names → ElevenLabs voice IDs (used when ElevenLabs key is present)
+// eleven_turbo_v2_5 is multilingual (32 languages) — same voices work for EN/TA/HI
+const VOICE_TO_ELEVEN: Record<string, string> = {
+  priya: "EXAVITQu4vr4xnSDxMaL",   // Sarah — gentle, storytelling warmth (kids default)
+  kavya: "21m00Tcm4TlvDq8ikWAM",   // Rachel — warm, calm, authoritative
+  kabir: "CwhRBWXzGAHq8TQ4Fs17",   // Roger — neutral, warm male
+};
+
 const ttsCache = new Map<string, string>();
 
 function getCacheKey(text: string, language: string, pace: number, voice: string): string {
@@ -87,12 +96,21 @@ export async function textToSpeech(
     return ttsCache.get(key)!;
   }
 
+  // Route through ElevenLabs when API key is present (all languages).
+  // eleven_turbo_v2_5 is multilingual — same voices handle EN/TA/HI.
+  if (isElevenLabsAvailable()) {
+    const elevenVoiceId = VOICE_TO_ELEVEN[voice] ?? VOICE_TO_ELEVEN["kabir"];
+    const base64 = await elevenLabsTTS(cleaned, elevenVoiceId, pace);
+    ttsCache.set(key, base64);
+    return base64;
+  }
+
+  // ── Sarvam fallback (when ElevenLabs key is not set) ──────────────────────
+
   // bulbul:v3 supports up to 2500 chars; truncate conservatively
   const maxLen = 2000;
   const input = cleaned.length > maxLen ? cleaned.slice(0, maxLen) : cleaned;
 
-  // bulbul:v3 uses "text" (string), not "inputs" (array like v2).
-  // enable_preprocessing is auto-enabled in v3 — do not send it.
   const body: Record<string, unknown> = {
     text: input,
     target_language_code: language,

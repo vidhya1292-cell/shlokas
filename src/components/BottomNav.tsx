@@ -14,29 +14,20 @@ export default function BottomNav() {
   const t = (en: string, ta: string, hi: string) => isTamil ? ta : isHindi ? hi : en;
 
   const tabs = [
-    {
-      path: "/",
-      icon: "🏠",
-      label: t("Home", "முகப்பு", "होम"),
-    },
-    {
-      path: "/session",
-      icon: "🎓",
-      label: t("Learning", "கற்றல்", "सीखें"),
-    },
-    {
-      path: "/read",
-      icon: "📖",
-      label: t("Reading", "வாசிப்பு", "पठन"),
-    },
+    { path: "/",        icon: "🏠", label: t("Home",   "முகப்பு", "होम")    },
+    { path: "/learn",   icon: "🎓", label: t("Learn",  "கற்க",   "सीखें")  },
+    { path: "/read",    icon: "📖", label: t("Read",   "படி",    "पढ़ें")   },
+    { path: "/listen",  icon: "🎧", label: t("Listen", "கேள்",   "सुनें")  },
+    { path: "/account", icon: "👤", label: t("Me",     "நான்",   "मैं")     },
   ];
 
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-[480px] mx-auto"
       style={{
-        background: "white",
-        borderTop: "1px solid #DBEAFE",
+        background: "rgba(253,248,240,0.97)",
+        backdropFilter: "blur(12px)",
+        borderTop: `1px solid #E8DCC8`,
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
@@ -50,7 +41,7 @@ export default function BottomNav() {
               className="flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-all active:scale-95"
               style={{ color: isActive ? P.primary : "#9CA3AF" }}
             >
-              <span style={{ fontSize: 22 }}>{tab.icon}</span>
+              <span style={{ fontSize: 20 }}>{tab.icon}</span>
               <span
                 style={{
                   fontSize: 11,

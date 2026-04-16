@@ -1,4 +1,4 @@
-import { UserProgress, VerseProgress, Confidence } from "../types";
+import { UserProgress, VerseProgress, Confidence, ScriptureId, ScriptureProgress } from "../types";
 
 const STORAGE_KEY = "shloka_guru_progress";
 
@@ -10,6 +10,8 @@ const DEFAULT_PROGRESS: UserProgress = {
   verseProgress: {},
   language: "en-IN",
   voice: "kabir",
+  currentScripture: "bg",
+  scriptureProgress: {},
 };
 
 // v2 voice IDs that are invalid in bulbul:v3
@@ -39,6 +41,48 @@ export function saveProgress(progress: UserProgress): void {
 
 export function getVerseKey(chapter: number, verse: number): string {
   return `${chapter}:${verse}`;
+}
+
+/** Get the ScriptureProgress for a given scripture, falling back to BG fields */
+export function getScriptureProgress(
+  progress: UserProgress,
+  scriptureId: ScriptureId
+): ScriptureProgress {
+  if (scriptureId === "bg") {
+    return {
+      currentChapter: progress.currentChapter,
+      currentVerse: progress.currentVerse,
+      verseProgress: progress.verseProgress,
+    };
+  }
+  return progress.scriptureProgress?.[scriptureId] ?? {
+    currentChapter: 1,
+    currentVerse: 1,
+    verseProgress: {},
+  };
+}
+
+/** Save progress for a specific scripture */
+export function saveScriptureProgress(
+  progress: UserProgress,
+  scriptureId: ScriptureId,
+  sp: ScriptureProgress
+): UserProgress {
+  if (scriptureId === "bg") {
+    return {
+      ...progress,
+      currentChapter: sp.currentChapter,
+      currentVerse: sp.currentVerse,
+      verseProgress: sp.verseProgress,
+    };
+  }
+  return {
+    ...progress,
+    scriptureProgress: {
+      ...progress.scriptureProgress,
+      [scriptureId]: sp,
+    },
+  };
 }
 
 export function getVerseProgress(

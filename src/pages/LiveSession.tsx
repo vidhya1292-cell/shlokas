@@ -6,7 +6,8 @@ import {
   getDueVerses,
   updateStreak,
 } from "../services/storage";
-import { verses as allVerses, getVerse } from "../data/bgData";
+import { getScripture } from "../data/scriptureRegistry";
+import { getScriptureProgress, saveScriptureProgress } from "../services/storage";
 import { SessionVerse, SessionStats, UserProgress } from "../types";
 import { useSessionEngine } from "../hooks/useSessionEngine";
 import { transliterateToRoman, transliterateToTamil, unlockAudioContext, getWordFeedback, stopCurrentAudio } from "../services/sarvamService";
@@ -15,28 +16,31 @@ import { AudioVisualizer } from "../components/AudioVisualizer";
 import { motion, AnimatePresence } from "framer-motion";
 
 function buildSessionVerses(progress: UserProgress): SessionVerse[] {
-  const dueKeys = getDueVerses(progress);
+  const scriptureId = progress.currentScripture ?? "bg";
+  const scripture   = getScripture(scriptureId);
+  const allVerses   = scripture.verses;
+  const sp          = getScriptureProgress(progress, scriptureId);
+  const dueKeys     = getDueVerses({ ...progress, ...sp });
 
   // Up to 3 revision verses
   const revisionVerses: SessionVerse[] = dueKeys
     .slice(0, 3)
     .map(({ chapter, verse }) => {
-      const v = getVerse(chapter, verse);
+      const v = allVerses.find(x => x.chapter === chapter && x.verse === verse);
       return v ? { ...v, isNew: false, retryCount: 0 } : null;
     })
     .filter(Boolean) as SessionVerse[];
 
   const revisionSet = new Set(revisionVerses.map((v) => `${v.chapter}:${v.verse}`));
-  const learnedSet = new Set(Object.keys(progress.verseProgress));
+  const learnedSet  = new Set(Object.keys(sp.verseProgress));
 
-  // Start scanning for new verses from user's chosen chapter:verse, wrap around
+  // Start scanning from user's current chapter:verse, wrap around
   const startIdx = allVerses.findIndex(
-    (v) => !v.isPlaceholder && v.chapter === progress.currentChapter && v.verse >= progress.currentVerse
+    (v) => !v.isPlaceholder && v.chapter === sp.currentChapter && v.verse >= sp.currentVerse
   );
   const from = startIdx >= 0 ? startIdx : 0;
   const orderedVerses = [...allVerses.slice(from), ...allVerses.slice(0, from)];
 
-  // Fill remaining slots with new verses so session always has up to 5 total
   const maxNew = Math.max(2, 5 - revisionVerses.length);
   const newVerses: SessionVerse[] = [];
   for (const v of orderedVerses) {
@@ -48,14 +52,11 @@ function buildSessionVerses(progress: UserProgress): SessionVerse[] {
     }
   }
 
-  // Always 5 total: pad with revision or new if needed
   const session = [...revisionVerses, ...newVerses].slice(0, 5);
   if (session.length === 0) {
-    // fallback: first verse
     const first = allVerses.find((v) => !v.isPlaceholder);
     if (first) session.push({ ...first, isNew: true, retryCount: 0 });
   }
-
   return session;
 }
 

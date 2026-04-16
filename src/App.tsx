@@ -1,9 +1,12 @@
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Home from "@/pages/Home";
+import Learn from "@/pages/Learn";
 import LiveSession from "@/pages/LiveSession";
 import Onboarding from "@/pages/Onboarding";
 import Read from "@/pages/Read";
+import Listen from "@/pages/Listen";
+import Account from "@/pages/Account";
 import NotFound from "@/pages/not-found";
 import BottomNav from "@/components/BottomNav";
 import { loadProgress } from "@/services/storage";
@@ -73,15 +76,18 @@ function Router() {
     return <Redirect to="/onboarding" />;
   }
 
-  const showNav = location === "/" || location === "/read" || location === "/session";
+  const showNav = ["/", "/learn", "/read", "/listen", "/account"].includes(location);
 
   return (
     <>
       <Switch>
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/" component={Home} />
+        <Route path="/learn" component={Learn} />
         <Route path="/session" component={LiveSession} />
         <Route path="/read" component={Read} />
+        <Route path="/listen" component={Listen} />
+        <Route path="/account" component={Account} />
         <Route component={NotFound} />
       </Switch>
       {showNav && <BottomNav />}

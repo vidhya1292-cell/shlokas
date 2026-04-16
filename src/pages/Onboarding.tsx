@@ -21,12 +21,15 @@ const P = {
   border:  "#DBEAFE",
 };
 
-type Screen = "age" | "language";
+type Screen = "name" | "age" | "language";
 
 export default function Onboarding() {
   const [, navigate] = useLocation();
-  const [screen, setScreen] = useState<Screen>("age");
+  const [screen, setScreen] = useState<Screen>("name");
+  const [nameInput, setNameInput] = useState("");
   const [ageGroup, setAgeGroup] = useState<"kids" | "adults" | null>(null);
+
+  const submitName = () => setScreen("age");
 
   const selectAge = (age: "kids" | "adults") => {
     setAgeGroup(age);
@@ -38,6 +41,7 @@ export default function Onboarding() {
     const age = ageGroup ?? "adults";
     saveProgress({
       ...progress,
+      name: nameInput.trim() || undefined,
       language: lang,
       ageGroup: age,
       voice: age === "kids" ? DEFAULT_KIDS_VOICE : DEFAULT_VOICE,
@@ -52,6 +56,70 @@ export default function Onboarding() {
       style={{ background: "transparent", color: P.text }}
     >
       <AnimatePresence mode="wait">
+
+        {/* ── Name ─────────────────────────────────────────────────────────── */}
+        {screen === "name" && (
+          <motion.div
+            key="name"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full"
+          >
+            <div className="text-center mb-8">
+              <div
+                className="text-3xl mb-3"
+                style={{ fontFamily: "'Noto Serif Devanagari', serif", color: P.gold }}
+              >
+                ॐ
+              </div>
+              <h2 className="text-2xl font-bold mb-2" style={{ color: P.primary }}>
+                What shall we call you?
+              </h2>
+              <p className="text-sm opacity-60">
+                We'll greet you by name each day
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <input
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitName()}
+                placeholder="e.g. Vidhya, Sudha, Ramesh…"
+                autoFocus
+                className="w-full rounded-2xl px-5 py-4 text-base outline-none"
+                style={{
+                  background: "white",
+                  border: `2px solid ${nameInput.trim() ? P.primary : P.border}`,
+                  color: P.text,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                  transition: "border-color 0.2s",
+                }}
+              />
+              <button
+                onClick={submitName}
+                className="w-full rounded-2xl py-4 font-bold text-base transition-all active:scale-[0.98]"
+                style={{
+                  background: P.primary,
+                  color: "white",
+                  boxShadow: "0 4px 16px rgba(30,58,138,0.25)",
+                }}
+              >
+                Continue →
+              </button>
+            </div>
+
+            <button
+              onClick={submitName}
+              className="block mx-auto mt-5 text-xs opacity-35 underline"
+            >
+              Skip
+            </button>
+          </motion.div>
+        )}
 
         {/* ── Age Group ──────────────────────────────────────────────────── */}
         {screen === "age" && (

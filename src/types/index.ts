@@ -41,12 +41,27 @@ export interface VerseProgress {
   lastPracticed: string;
 }
 
-export interface UserProgress {
+// All supported learning scriptures
+export type ScriptureId = "bg" | "hanuman_chalisa" | "narayaneeyam" | "ramayana_sundara";
+
+export interface ScriptureProgress {
   currentChapter: number;
   currentVerse: number;
+  verseProgress: Record<string, VerseProgress>;
+}
+
+export interface UserProgress {
+  // BG fields kept for backward-compat (= bg scripture progress)
+  currentChapter: number;
+  currentVerse: number;
+  verseProgress: Record<string, VerseProgress>;
+  // Multi-scripture support
+  currentScripture?: ScriptureId;
+  scriptureProgress?: Partial<Record<ScriptureId, ScriptureProgress>>;
+  // App-level
+  name?: string;
   streakCount: number;
   lastPracticeDate: string;
-  verseProgress: Record<string, VerseProgress>;
   language: "en-IN" | "ta-IN" | "hi-IN";
   voice?: string;
   hasCompletedOnboarding?: boolean;
