@@ -27,7 +27,7 @@ const STEP_AFTER: Partial<Record<SessionState, SessionState>> = {
   NARRATE_INTRO: "PLAY_SHLOKA",
   PLAY_SHLOKA: "PLAY_SHLOKA_2",
   PLAY_SHLOKA_2: "NARRATE_YOUR_TURN",
-  NARRATE_YOUR_TURN: "RECORD_RECITE",
+  NARRATE_YOUR_TURN: "PLAY_SHLOKA_SLOW",
   PLAY_SHLOKA_SLOW: "RECORD_RECITE",
   RECORD_RECITE: "SHOW_MEANING",
   SHOW_MEANING: "RATE_VERSE",
@@ -134,13 +134,19 @@ export function useSessionEngine(
 
       // ── Welcome ──────────────────────────────────────────────────────────────
       if (nextState === "NARRATE_OPENING") {
+        // Invocation — spoken alone, reverently
+        await safePlay("Om Namo Bhagavate Vasudevaya", "en-IN", 1.0, myId);
+        if (!ok()) return;
+        await new Promise((r) => setTimeout(r, 600));
+        if (!ok()) return;
+        // Welcome message
         const greeting = getGreetingPart();
-        const text = isEnglish
-          ? `Om Namo Bhagavate Vasudevaya. ${greeting}! Welcome to Day ${dayNumber}. We will cover ${revisionCount > 0 ? `${revisionCount} revision` + (revisionCount > 1 ? "s" : "") + " and " : ""}${newCount} new verse${newCount !== 1 ? "s" : ""} today. Let's begin.`
+        const welcome = isEnglish
+          ? `${greeting}! Welcome to Day ${dayNumber}. We will cover ${revisionCount > 0 ? `${revisionCount} revision` + (revisionCount > 1 ? "s" : "") + " and " : ""}${newCount} new verse${newCount !== 1 ? "s" : ""} today. Let's begin.`
           : isHindi
-          ? `ॐ नमो भगवते वासुदेवाय। ${greeting}! दिन ${dayNumber} में आपका स्वागत है। आज हम ${revisionCount > 0 ? `${revisionCount} पुनरावृत्ति और ` : ""}${newCount} नए श्लोक सीखेंगे।`
-          : `Om Namo Bhagavate Vasudevaya. ${greeting}! Day ${dayNumber}-க்கு வரவேற்கிறோம். ${revisionCount > 0 ? `${revisionCount} revision-உம் ` : ""}${newCount} புது verse${newCount !== 1 ? "கள்" : ""} இன்னைக்கு practice பண்ணலாம்.`;
-        await safePlay(text, tl, 1.0, myId);
+          ? `${greeting}! दिन ${dayNumber} में आपका स्वागत है। आज हम ${revisionCount > 0 ? `${revisionCount} पुनरावृत्ति और ` : ""}${newCount} नए श्लोक सीखेंगे।`
+          : `${greeting}! Day ${dayNumber}-க்கு வரவேற்கிறோம். ${revisionCount > 0 ? `${revisionCount} revision-உம் ` : ""}${newCount} புது verse${newCount !== 1 ? "கள்" : ""} இன்னைக்கு practice பண்ணலாம்.`;
+        await safePlay(welcome, tl, 1.0, myId);
         if (ok()) advance("NARRATE_INTRO", 0);
 
       // ── Verse intro ───────────────────────────────────────────────────────────
@@ -166,27 +172,34 @@ export function useSessionEngine(
       } else if (nextState === "PLAY_SHLOKA_2") {
         // nothing — wait for user tap
 
-      // ── Step 3: Your turn prompt → directly to recording ────────────────────
+      // ── Step 3: Recite along prompt ───────────────────────────────────────────
       } else if (nextState === "NARRATE_YOUR_TURN") {
         const text = isEnglish
-          ? "Now it's your turn. Tap the record button and recite the shloka."
+          ? "Now recite along with the chanting."
           : isHindi
-          ? "अब आपकी बारी है। रिकॉर्ड बटन दबाएं और श्लोक बोलें।"
-          : "இப்போ உங்கள் முறை. Record பட்டனை தட்டி ஸ்லோகத்தை சொல்லுங்க.";
+          ? "अब पाठ के साथ मिलकर बोलें।"
+          : "இப்போ சேர்ந்து சொல்லுங்க.";
         await safePlay(text, tl, 1.0, myId);
-        if (ok()) advance("RECORD_RECITE", currentVerseIndex);
+        if (ok()) advance("PLAY_SHLOKA_SLOW", currentVerseIndex);
 
-      // ── Step 4 (Skip only): Slow listen before retry ─────────────────────────
+      // ── Step 4: Slow listen — user recites along ──────────────────────────────
       } else if (nextState === "PLAY_SHLOKA_SLOW") {
-        // nothing — wait for user tap (reached via Skip or retryRecording)
+        // nothing — wait for user tap
 
-      // ── Step 4: Record + check ────────────────────────────────────────────────
+      // ── Step 5: Record + check ────────────────────────────────────────────────
       } else if (nextState === "RECORD_RECITE") {
-        // Reset recording state — prompt was already played in NARRATE_YOUR_TURN
+        // Reset recording state
         setSttResult("");
         setAccuracy(null);
         setIsRecording(false);
         setSttLoading(false);
+        // Prompt to record
+        const recitePrompt = isEnglish
+          ? "Now it's your turn. Tap the record button and recite the shloka."
+          : isHindi
+          ? "अब आपकी बारी है। रिकॉर्ड बटन दबाएं और श्लोक बोलें।"
+          : "இப்போ உங்கள் முறை. Record பட்டனை தட்டி ஸ்லோகத்தை சொல்லுங்க.";
+        await safePlay(recitePrompt, tl, 1.0, myId);
         // Stays here until user taps "Record" or "Continue to Meaning"
 
       // ── Step 6: Meaning ───────────────────────────────────────────────────────
@@ -374,15 +387,21 @@ export function useSessionEngine(
     const isHindi = language === "hi-IN";
     const tl = language;
 
-    // "Your turn" prompt — same for all verses, cache once
-    const yourTurnText = isEnglish
+    // Fixed prompts — same for all verses, cache once each
+    const reciteAlongText = isEnglish
+      ? "Now recite along with the chanting."
+      : isHindi
+      ? "अब पाठ के साथ मिलकर बोलें।"
+      : "இப்போ சேர்ந்து சொல்லுங்க.";
+    const recordPromptText = isEnglish
       ? "Now it's your turn. Tap the record button and recite the shloka."
       : isHindi
       ? "अब आपकी बारी है। रिकॉर्ड बटन दबाएं और श्लोक बोलें।"
       : "இப்போ உங்கள் முறை. Record பட்டனை தட்டி ஸ்லோகத்தை சொல்லுங்க.";
 
     const toGenerate: Array<{ text: string; language: string; pace: number; voice: string }> = [
-      { text: yourTurnText, language: tl, pace: 1.0, voice: voiceId },
+      { text: reciteAlongText, language: tl, pace: 1.0, voice: voiceId },
+      { text: recordPromptText, language: tl, pace: 1.0, voice: voiceId },
     ];
 
     for (const v of verses) {
