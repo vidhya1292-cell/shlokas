@@ -391,7 +391,7 @@ export default function DailyCard({ language }: Props) {
           "{quoteText}"
         </p>
 
-        {/* Original text (Sanskrit / Tamil) */}
+        {/* Original text (Sanskrit / Tamil) — show full couplet */}
         <p
           style={{
             fontFamily: quote.originalLang === "ta"
@@ -399,11 +399,12 @@ export default function DailyCard({ language }: Props) {
               : "'Noto Serif Devanagari', serif",
             fontSize: 12,
             color: "#4B6CB7",
-            lineHeight: 1.6,
+            lineHeight: 1.7,
             marginBottom: 3,
+            whiteSpace: "pre-line",
           }}
         >
-          {quote.original.split("\n")[0]}
+          {quote.original}
         </p>
         <p style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 14 }}>
           — {quote.sourceShort}
