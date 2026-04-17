@@ -52,18 +52,18 @@ export interface VoiceOption {
 export const VOICE_OPTIONS: VoiceOption[] = [
   { id: "priya",  name: "Priya",  gender: "female", tagline: "Warm & gentle",   kidsDefault: true },
   { id: "kavya",  name: "Kavya",  gender: "female", tagline: "Calm & expressive" },
-  { id: "kabir",  name: "Kabir",  gender: "male",   tagline: "Warm & smooth" },
+  { id: "kabir",  name: "Kabir",  gender: "male",   tagline: "Deep & authoritative" },
 ];
 
 export const DEFAULT_VOICE = "kabir";
 export const DEFAULT_KIDS_VOICE = "priya";
 
-// Maps app voice names → ElevenLabs voice IDs (used when ElevenLabs key is present)
-// eleven_turbo_v2_5 is multilingual (32 languages) — same voices work for EN/TA/HI
+// Maps app voice names → ElevenLabs voice IDs (English narration only)
+// ElevenLabs is only used for en-IN; Tamil + Hindi always use Sarvam for native quality
 const VOICE_TO_ELEVEN: Record<string, string> = {
   priya: "EXAVITQu4vr4xnSDxMaL",   // Sarah — gentle, storytelling warmth (kids default)
   kavya: "21m00Tcm4TlvDq8ikWAM",   // Rachel — warm, calm, authoritative
-  kabir: "CwhRBWXzGAHq8TQ4Fs17",   // Roger — neutral, warm male
+  kabir: "pNInz6obpgDQGcFmaJgB",   // Adam — deep, authoritative, guru-like
 };
 
 const ttsCache = new Map<string, string>();
@@ -96,16 +96,16 @@ export async function textToSpeech(
     return ttsCache.get(key)!;
   }
 
-  // Route through ElevenLabs when API key is present (all languages).
-  // eleven_turbo_v2_5 is multilingual — same voices handle EN/TA/HI.
-  if (isElevenLabsAvailable()) {
+  // ElevenLabs for English narration only — Indian languages use Sarvam for native quality.
+  // Sending Tamil/Hindi text to an English ElevenLabs voice produces accented, unnatural output.
+  if (isElevenLabsAvailable() && language === "en-IN") {
     const elevenVoiceId = VOICE_TO_ELEVEN[voice] ?? VOICE_TO_ELEVEN["kabir"];
     const base64 = await elevenLabsTTS(cleaned, elevenVoiceId, pace);
     ttsCache.set(key, base64);
     return base64;
   }
 
-  // ── Sarvam fallback (when ElevenLabs key is not set) ──────────────────────
+  // ── Sarvam (TA/HI always; EN fallback when ElevenLabs key not set) ────────
 
   // bulbul:v3 supports up to 2500 chars; truncate conservatively
   const maxLen = 2000;
