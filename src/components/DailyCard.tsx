@@ -163,10 +163,15 @@ async function buildShareCard(params: {
   ctx.textAlign = "center";
   wrapText(ctx, `"${quoteText}"`, W / 2, W - 80, 28, H - 124);
 
-  // Source
+  // Source — localize Tamil-script sourceShort for non-Tamil users
+  const sourceLabel = !isTamil && quote.sourceShort.startsWith("குறள்")
+    ? isHindi
+      ? quote.sourceShort.replace("குறள்", "कुरल")
+      : quote.sourceShort.replace("குறள்", "Kural")
+    : quote.sourceShort;
   ctx.font = "bold 13px sans-serif";
   ctx.fillStyle = "#FFD87A";
-  ctx.fillText(`— ${quote.sourceShort}`, W / 2, H - 26);
+  ctx.fillText(`— ${sourceLabel}`, W / 2, H - 26);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 0.92));
 }
@@ -207,8 +212,11 @@ function buildShareText(params: {
     `\n${deity.symbol} *${deityName}* — ${dayLabel}` +
     festivalLine +
     `\n\n✨ _"${quoteText}"_` +
-    `\n\n🕉️ ${quote.original.split("\n")[0]}` +
-    `\n📖 ${quote.sourceShort}` +
+    // Show original script only when it matches the user's language (Tamil for Tamil users, Sanskrit always)
+    (quote.originalLang === "sa" || isTamil
+      ? `\n\n🕉️ ${quote.original.split("\n")[0]}`
+      : "") +
+    `\n📖 ${!isTamil && quote.sourceShort.startsWith("குறள்") ? (isHindi ? quote.sourceShort.replace("குறள்", "कुरल") : quote.sourceShort.replace("குறள்", "Kural")) : quote.sourceShort}` +
     `\n━━━━━━━━━━━━━━━━━━━` +
     `\n${footer}`
   );
