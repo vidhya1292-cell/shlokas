@@ -78,5 +78,6 @@ export async function elevenLabsTTS(
 }
 
 export function isElevenLabsAvailable(): boolean {
-  return !!API_KEY;
+  // Guard against placeholder values like "your_elevenlabs_key_here"
+  return !!API_KEY && API_KEY.length > 20 && !API_KEY.includes("_here");
 }
