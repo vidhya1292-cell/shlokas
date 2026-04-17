@@ -11,31 +11,7 @@
  *   Creating a new Audio() element after the gesture is blocked on iOS 14 and earlier.
  */
 
-import { getSharedAudioContext } from "./sharedAudioContext";
-
 const BASE = "https://www.holy-bhagavad-gita.org/media/audios";
-
-// Route persistentAudio through a GainNode so the shloka MP3 volume
-// matches the TTS narration (which is typically normalized louder).
-let _mediaElementSource: MediaElementAudioSourceNode | null = null;
-let _gainNode: GainNode | null = null;
-const SHLOKA_GAIN = 1.8; // ≈ +5 dB boost
-
-function ensureGainChain(): void {
-  const ctx = getSharedAudioContext();
-  if (!ctx || _mediaElementSource) return;
-  try {
-    _mediaElementSource = ctx.createMediaElementSource(persistentAudio);
-    _gainNode = ctx.createGain();
-    _gainNode.gain.value = SHLOKA_GAIN;
-    _mediaElementSource.connect(_gainNode);
-    _gainNode.connect(ctx.destination);
-  } catch {
-    // Already connected or unsupported — fall back to native HTML5 volume
-    _mediaElementSource = null;
-    _gainNode = null;
-  }
-}
 
 // Smallest valid WAV (44 bytes, 1 sample, silence)
 const SILENT_WAV =
@@ -153,9 +129,6 @@ export function playVerseShloka(
       }
       settle(() => reject(new Error(`Audio error ${code}`)));
     };
-
-    // Connect through GainNode for volume boost (first time only)
-    ensureGainChain();
 
     // IMPORTANT: Do NOT call .load() — may revoke iOS Safari autoplay permission.
     persistentAudio.src = localUrl;
