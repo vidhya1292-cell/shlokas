@@ -27,7 +27,7 @@ const STEP_AFTER: Partial<Record<SessionState, SessionState>> = {
   NARRATE_INTRO: "PLAY_SHLOKA",
   PLAY_SHLOKA: "PLAY_SHLOKA_2",
   PLAY_SHLOKA_2: "NARRATE_YOUR_TURN",
-  NARRATE_YOUR_TURN: "PLAY_SHLOKA_SLOW",
+  NARRATE_YOUR_TURN: "RECORD_RECITE",
   PLAY_SHLOKA_SLOW: "RECORD_RECITE",
   RECORD_RECITE: "SHOW_MEANING",
   SHOW_MEANING: "RATE_VERSE",
@@ -166,34 +166,27 @@ export function useSessionEngine(
       } else if (nextState === "PLAY_SHLOKA_2") {
         // nothing — wait for user tap
 
-      // ── Step 3: Recite along prompt ───────────────────────────────────────────
+      // ── Step 3: Your turn prompt → directly to recording ────────────────────
       } else if (nextState === "NARRATE_YOUR_TURN") {
         const text = isEnglish
-          ? "Now recite along with the chanting."
-          : isHindi
-          ? "अब पाठ के साथ मिलकर बोलें।"
-          : "இப்போ சேர்ந்து சொல்லுங்க.";
-        await safePlay(text, tl, 1.0, myId);
-        if (ok()) advance("PLAY_SHLOKA_SLOW", currentVerseIndex);
-
-      // ── Step 4: Third listen — slower ─────────────────────────────────────────
-      } else if (nextState === "PLAY_SHLOKA_SLOW") {
-        // nothing — wait for user tap
-
-      // ── Step 5: Record yourself (optional) ───────────────────────────────────
-      } else if (nextState === "RECORD_RECITE") {
-        // Reset recording state for the new verse
-        setSttResult("");
-        setAccuracy(null);
-        setIsRecording(false);
-        setSttLoading(false);
-        // Prompt the student to record
-        const recitePrompt = isEnglish
           ? "Now it's your turn. Tap the record button and recite the shloka."
           : isHindi
           ? "अब आपकी बारी है। रिकॉर्ड बटन दबाएं और श्लोक बोलें।"
           : "இப்போ உங்கள் முறை. Record பட்டனை தட்டி ஸ்லோகத்தை சொல்லுங்க.";
-        await safePlay(recitePrompt, tl, 1.0, myId);
+        await safePlay(text, tl, 1.0, myId);
+        if (ok()) advance("RECORD_RECITE", currentVerseIndex);
+
+      // ── Step 4 (Skip only): Slow listen before retry ─────────────────────────
+      } else if (nextState === "PLAY_SHLOKA_SLOW") {
+        // nothing — wait for user tap (reached via Skip or retryRecording)
+
+      // ── Step 4: Record + check ────────────────────────────────────────────────
+      } else if (nextState === "RECORD_RECITE") {
+        // Reset recording state — prompt was already played in NARRATE_YOUR_TURN
+        setSttResult("");
+        setAccuracy(null);
+        setIsRecording(false);
+        setSttLoading(false);
         // Stays here until user taps "Record" or "Continue to Meaning"
 
       // ── Step 6: Meaning ───────────────────────────────────────────────────────
@@ -378,21 +371,46 @@ export function useSessionEngine(
   const startSession = useCallback(async () => {
     setLoadingMessage("Preparing your class...");
     const isEnglish = language === "en-IN";
-    const toGenerate = verses.flatMap((v) => {
+    const isHindi = language === "hi-IN";
+    const tl = language;
+
+    // "Your turn" prompt — same for all verses, cache once
+    const yourTurnText = isEnglish
+      ? "Now it's your turn. Tap the record button and recite the shloka."
+      : isHindi
+      ? "अब आपकी बारी है। रिकॉर्ड बटन दबाएं और श्लोक बोलें।"
+      : "இப்போ உங்கள் முறை. Record பட்டனை தட்டி ஸ்லோகத்தை சொல்லுங்க.";
+
+    const toGenerate: Array<{ text: string; language: string; pace: number; voice: string }> = [
+      { text: yourTurnText, language: tl, pace: 1.0, voice: voiceId },
+    ];
+
+    for (const v of verses) {
+      // Per-verse intro (NARRATE_INTRO)
+      const tag = v.isNew
+        ? (isEnglish ? "New verse" : isHindi ? "नया श्लोक" : "புது verse")
+        : (isEnglish ? "Revision" : isHindi ? "पुनरावृत्ति" : "மறுபயிற்சி");
+      const introText = isEnglish
+        ? `Chapter ${v.chapter}, Verse ${v.verse}. ${tag}. Listen carefully.`
+        : isHindi
+        ? `अध्याय ${v.chapter}, श्लोक ${v.verse}। ${tag}। ध्यान से सुनें।`
+        : `Chapter ${v.chapter}, Verse ${v.verse}. ${tag}. கவனமா கேளுங்க.`;
+      toGenerate.push({ text: introText, language: tl, pace: 1.0, voice: voiceId });
+
+      // Meaning + reflection (SHOW_MEANING)
       const hasTamilMeaning = !isEnglish && !!v.meaningTA;
       const meaningText = hasTamilMeaning ? v.meaningTA! : v.meaningEN;
       const meaningLang = hasTamilMeaning ? language : "en-IN";
-      const items: Array<{ text: string; language: string; pace: number; voice: string }> = [
-        { text: meaningText, language: meaningLang, pace: 1.0, voice: voiceId },
-      ];
+      toGenerate.push({ text: meaningText, language: meaningLang, pace: 1.0, voice: voiceId });
+
       if (v.reflection) {
         const hasTamilReflection = !isEnglish && !!v.reflectionTA;
         const reflectionText = hasTamilReflection ? v.reflectionTA! : v.reflection;
         const reflectionLang = hasTamilReflection ? language : "en-IN";
-        items.push({ text: reflectionText, language: reflectionLang, pace: 1.0, voice: voiceId });
+        toGenerate.push({ text: reflectionText, language: reflectionLang, pace: 1.0, voice: voiceId });
       }
-      return items;
-    });
+    }
+
     // Fire pre-generation in background — do NOT await it.
     // If Sarvam API is slow/rate-limited, awaiting it would block the entire session start.
     preGenerateAudio(toGenerate).catch(() => {});
@@ -489,7 +507,7 @@ export function useSessionEngine(
     const verse = verses[verseIndex];
     const meaningText = language !== "en-IN" && verse.meaningTA ? verse.meaningTA : verse.meaningEN;
     import("../services/sarvamService").then(({ textToSpeech, playBase64Audio }) => {
-      textToSpeech(meaningText, language, 0.9, voiceId)
+      textToSpeech(meaningText, language, 1.0, voiceId)
         .then(playBase64Audio)
         .catch(() => {});
     });
