@@ -195,10 +195,10 @@ export function useSessionEngine(
         setSttLoading(false);
         // Prompt to record
         const recitePrompt = isEnglish
-          ? "Now it's your turn. Tap the record button and recite the shloka."
+          ? "Now record yourself reciting the shloka and check your corrections."
           : isHindi
-          ? "अब आपकी बारी है। रिकॉर्ड बटन दबाएं और श्लोक बोलें।"
-          : "இப்போ உங்கள் முறை. Record பட்டனை தட்டி ஸ்லோகத்தை சொல்லுங்க.";
+          ? "अब श्लोक बोलते हुए रिकॉर्ड करें और अपनी गलतियाँ जाँचें।"
+          : "இப்போ ஸ்லோகத்தை record பண்ணி உங்கள் திருத்தங்களை சரிபாருங்க.";
         await safePlay(recitePrompt, tl, 1.0, myId);
         // Stays here until user taps "Record" or "Continue to Meaning"
 
@@ -209,7 +209,6 @@ export function useSessionEngine(
         const meaningLang = hasTamilMeaning ? tl : "en-IN";
         if (ok()) await safePlay(meaningText, meaningLang, 1.0, myId);
         if (ok() && verse.reflection) {
-          await new Promise((r) => setTimeout(r, 300));
           const hasTamilReflection = !isEnglish && !!verse.reflectionTA;
           const reflectionText = hasTamilReflection ? verse.reflectionTA! : verse.reflection;
           const reflectionLang = hasTamilReflection ? tl : "en-IN";
@@ -348,22 +347,36 @@ export function useSessionEngine(
     }
   }, []);
 
-  const stopRecording = useCallback(async () => {
+  /**
+   * Stop recording, run STT, then play teacher feedback.
+   * - Accuracy ≥ 70%: appreciation → auto-advance to SHOW_MEANING
+   * - Accuracy < 70%: "not strong, try again" → stay so user can retry
+   * - STT failed (null): silently advance
+   */
+  const submitRecording = useCallback(async () => {
     const mr = mediaRecorderRef.current;
     if (!mr) return;
     setIsRecording(false);
     setSttLoading(true);
+
+    const myId = ++advanceIdRef.current;
+    const ok = () => !pausedRef.current && advanceIdRef.current === myId;
+    const isEnglish = languageRef.current === "en-IN";
+    const isHindi = languageRef.current === "hi-IN";
+    const tl = languageRef.current;
+
     return new Promise<void>((resolve) => {
       mr.onstop = async () => {
+        let acc: number | null = null;
         try {
           const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
           mr.stream.getTracks().forEach((t) => t.stop());
           const transcript = await speechToText(blob);
-          const verse = verses[verseIndex];
-          const expectedText = languageRef.current === "ta-IN"
+          const verse = verses[verseIndexRef.current];
+          const expectedText = tl === "ta-IN"
             ? transliterateToTamil(verse.sanskrit)
             : transliterateToRoman(verse.sanskrit);
-          const acc = calculateAccuracy(transcript, expectedText);
+          acc = calculateAccuracy(transcript, expectedText);
           setSttResult(transcript);
           setAccuracy(acc);
         } catch (err) {
@@ -372,12 +385,38 @@ export function useSessionEngine(
           setAccuracy(null);
         } finally {
           setSttLoading(false);
-          resolve();
         }
+
+        if (!ok()) { resolve(); return; }
+
+        if (acc === null) {
+          // STT failed — advance silently
+          if (ok()) advance("SHOW_MEANING", verseIndexRef.current);
+        } else if (acc >= 70) {
+          // Good recitation — appreciate and auto-advance
+          const praise = isEnglish
+            ? "Excellent! That was very well done."
+            : isHindi
+            ? "शाबाश! बहुत अच्छा बोला।"
+            : "மிகவும் அருமை! சரியாக சொன்னீங்க.";
+          await safePlay(praise, tl, 1.0, myId);
+          if (ok()) advance("SHOW_MEANING", verseIndexRef.current);
+        } else {
+          // Needs more practice — encourage retry, stay in RECORD_RECITE
+          const nudge = isEnglish
+            ? "This one isn't strong yet. Try listening once more and recite again."
+            : isHindi
+            ? "यह अभी मजबूत नहीं है। एक बार और सुनकर फिर से बोलें।"
+            : "இது இன்னும் வலுவாக இல்லை. ஒரு தடவை கேட்டு மீண்டும் சொல்லுங்க.";
+          await safePlay(nudge, tl, 1.0, myId);
+          // Stay — UI shows "Try Again" and "Meaning →" buttons
+        }
+        resolve();
       };
       mr.stop();
     });
-  }, [verses, verseIndex]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verses, safePlay, advance]);
 
   // ─── Session control ────────────────────────────────────────────────────────
 
@@ -394,14 +433,24 @@ export function useSessionEngine(
       ? "अब पाठ के साथ मिलकर बोलें।"
       : "இப்போ சேர்ந்து சொல்லுங்க.";
     const recordPromptText = isEnglish
-      ? "Now it's your turn. Tap the record button and recite the shloka."
+      ? "Now record yourself reciting the shloka and check your corrections."
       : isHindi
-      ? "अब आपकी बारी है। रिकॉर्ड बटन दबाएं और श्लोक बोलें।"
-      : "இப்போ உங்கள் முறை. Record பட்டனை தட்டி ஸ்லோகத்தை சொல்லுங்க.";
+      ? "अब श्लोक बोलते हुए रिकॉर्ड करें और अपनी गलतियाँ जाँचें।"
+      : "இப்போ ஸ்லோகத்தை record பண்ணி உங்கள் திருத்தங்களை சரிபாருங்க.";
+    const praiseText = isEnglish
+      ? "Excellent! That was very well done."
+      : isHindi ? "शाबाश! बहुत अच्छा बोला।"
+      : "மிகவும் அருமை! சரியாக சொன்னீங்க.";
+    const nudgeText = isEnglish
+      ? "This one isn't strong yet. Try listening once more and recite again."
+      : isHindi ? "यह अभी मजबूत नहीं है। एक बार और सुनकर फिर से बोलें।"
+      : "இது இன்னும் வலுவாக இல்லை. ஒரு தடவை கேட்டு மீண்டும் சொல்லுங்க.";
 
     const toGenerate: Array<{ text: string; language: string; pace: number; voice: string }> = [
       { text: reciteAlongText, language: tl, pace: 1.0, voice: voiceId },
       { text: recordPromptText, language: tl, pace: 1.0, voice: voiceId },
+      { text: praiseText, language: tl, pace: 1.0, voice: voiceId },
+      { text: nudgeText, language: tl, pace: 1.0, voice: voiceId },
     ];
 
     for (const v of verses) {
@@ -584,7 +633,8 @@ export function useSessionEngine(
     skipVerse: skipStep,
     skipStep,
     startRecording,
-    stopRecording,
+    stopRecording: submitRecording,  // alias kept for any future callers
+    submitRecording,
     retryRecording,
     goToPreviousVerse,
     stopListening: () => {},

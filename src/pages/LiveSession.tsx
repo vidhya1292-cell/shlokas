@@ -558,7 +558,7 @@ export default function LiveSession() {
                     </button>
                   ) : (
                     <button
-                      onClick={engine.stopRecording}
+                      onClick={engine.submitRecording}
                       className="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-white text-base transition-all active:scale-95"
                       style={{ background: "#B91C1C" }}
                     >
