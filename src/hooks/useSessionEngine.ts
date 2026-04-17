@@ -198,21 +198,19 @@ export function useSessionEngine(
 
       // ── Step 6: Meaning ───────────────────────────────────────────────────────
       } else if (nextState === "SHOW_MEANING") {
-        const intro = isEnglish ? "Here is the meaning." : isHindi ? "यह है इसका अर्थ।" : "இதோ இதன் அர்த்தம்.";
-        await safePlay(intro, tl, 1.0, myId);
         const hasTamilMeaning = !isEnglish && !!verse.meaningTA;
         const meaningText = hasTamilMeaning ? verse.meaningTA! : verse.meaningEN;
         const meaningLang = hasTamilMeaning ? tl : "en-IN";
-        if (ok()) await safePlay(meaningText, meaningLang, 0.9, myId);
+        if (ok()) await safePlay(meaningText, meaningLang, 1.0, myId);
         if (ok() && verse.reflection) {
-          await new Promise((r) => setTimeout(r, 800));
+          await new Promise((r) => setTimeout(r, 300));
           const hasTamilReflection = !isEnglish && !!verse.reflectionTA;
           const reflectionText = hasTamilReflection ? verse.reflectionTA! : verse.reflection;
           const reflectionLang = hasTamilReflection ? tl : "en-IN";
-          if (ok()) await safePlay(reflectionText, reflectionLang, 0.9, myId);
+          if (ok()) await safePlay(reflectionText, reflectionLang, 1.0, myId);
         }
         if (ok()) {
-          await new Promise((r) => setTimeout(r, 1000));
+          await new Promise((r) => setTimeout(r, 800));
           if (ok()) advance("RATE_VERSE", currentVerseIndex);
         }
 
@@ -269,6 +267,23 @@ export function useSessionEngine(
   // play() MUST be called from a direct user gesture (button tap) — never from an
   // async chain — so that iOS Safari and Android Chrome allow audio without restrictions.
 
+  /** Play the shloka for the current scripture. Falls back to TTS for non-BG scriptures. */
+  const playShlokaAudio = useCallback(async (
+    verse: { chapter: number; verse: number; sanskrit: string },
+    speed: number,
+    myId: number
+  ): Promise<void> => {
+    const scriptureId = progressRef.current.currentScripture ?? "bg";
+    if (scriptureId === "bg") {
+      await playVerseShloka(verse.chapter, verse.verse, speed, "bg");
+    } else {
+      // Non-BG scripture: read the text via TTS (hi-IN handles Awadhi/Sanskrit Devanagari)
+      const ttsLang = (scriptureId === "hc" || scriptureId === "vs") ? "hi-IN" : languageRef.current;
+      await safePlay(verse.sanskrit, ttsLang, speed === 0.8 ? 0.7 : 1.0, myId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safePlay]);
+
   const playShlokaStep = useCallback(async () => {
     const myId = ++advanceIdRef.current;
     const ok = () => !pausedRef.current && advanceIdRef.current === myId;
@@ -282,7 +297,7 @@ export function useSessionEngine(
     stopChantingAudio();
 
     try {
-      await playVerseShloka(verse.chapter, verse.verse, speed);
+      await playShlokaAudio(verse, speed, myId);
     } catch (err) {
       console.warn("Shloka audio error:", err instanceof Error ? err.message : err);
     }
@@ -290,15 +305,21 @@ export function useSessionEngine(
     if (!ok()) return;
 
     if (curState === "PLAY_SHLOKA") {
-      await new Promise((r) => setTimeout(r, 600));
-      if (ok()) advance("PLAY_SHLOKA_2", curIdx);
+      // Auto-play a second time so user hears it twice from one tap
+      await new Promise((r) => setTimeout(r, 500));
+      if (!ok()) return;
+      try {
+        await playShlokaAudio(verse, 1.0, myId);
+      } catch {}
+      if (ok()) advance("NARRATE_YOUR_TURN", curIdx);
     } else if (curState === "PLAY_SHLOKA_2") {
+      // Reached via Skip — just advance
       if (ok()) advance("NARRATE_YOUR_TURN", curIdx);
     } else if (curState === "PLAY_SHLOKA_SLOW") {
       if (ok()) advance("RECORD_RECITE", curIdx);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verses, advance]);
+  }, [verses, advance, playShlokaAudio]);
 
   // ─── Recording ──────────────────────────────────────────────────────────────
 
@@ -356,11 +377,21 @@ export function useSessionEngine(
 
   const startSession = useCallback(async () => {
     setLoadingMessage("Preparing your class...");
+    const isEnglish = language === "en-IN";
     const toGenerate = verses.flatMap((v) => {
-      const hasTamilMeaning = language !== "en-IN" && !!v.meaningTA;
+      const hasTamilMeaning = !isEnglish && !!v.meaningTA;
       const meaningText = hasTamilMeaning ? v.meaningTA! : v.meaningEN;
       const meaningLang = hasTamilMeaning ? language : "en-IN";
-      return [{ text: meaningText, language: meaningLang, pace: 0.9, voice: voiceId }];
+      const items: Array<{ text: string; language: string; pace: number; voice: string }> = [
+        { text: meaningText, language: meaningLang, pace: 1.0, voice: voiceId },
+      ];
+      if (v.reflection) {
+        const hasTamilReflection = !isEnglish && !!v.reflectionTA;
+        const reflectionText = hasTamilReflection ? v.reflectionTA! : v.reflection;
+        const reflectionLang = hasTamilReflection ? language : "en-IN";
+        items.push({ text: reflectionText, language: reflectionLang, pace: 1.0, voice: voiceId });
+      }
+      return items;
     });
     // Fire pre-generation in background — do NOT await it.
     // If Sarvam API is slow/rate-limited, awaiting it would block the entire session start.
@@ -443,8 +474,14 @@ export function useSessionEngine(
     stopCurrentAudio();
     stopChantingAudio();
     const verse = verses[verseIndexRef.current];
-    playVerseShloka(verse.chapter, verse.verse).catch(() => {});
-  }, [verses]);
+    const scriptureId = progressRef.current.currentScripture ?? "bg";
+    if (scriptureId === "bg") {
+      playVerseShloka(verse.chapter, verse.verse).catch(() => {});
+    } else {
+      const ttsLang = (scriptureId === "hc" || scriptureId === "vs") ? "hi-IN" : languageRef.current;
+      safePlay(verse.sanskrit, ttsLang, 1.0).catch(() => {});
+    }
+  }, [verses, safePlay]);
 
   /** Replay the meaning TTS. */
   const replayMeaning = useCallback(() => {
